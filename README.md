@@ -73,9 +73,7 @@
 ```bash
 pnpm install
 pnpm run compile
-# Press F5 to launch Extension Development Host
-```
 
 ## 📄 License
 
-MIT © [duc-lta](https://github.com/duc-lta)
+MIT © [ducdev2k1](https://github.com/ducdev2k1)
