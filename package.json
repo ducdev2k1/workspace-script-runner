@@ -3,11 +3,11 @@
   "displayName": "Workspace Script Runner",
   "description": "Run npm scripts with intuitive UI, multi-root workspace support, and auto package manager detection",
   "version": "0.0.1",
-  "publisher": "duc-lta",
+  "publisher": "ducdev2k1",
   "icon": "resources/icon.png",
   "repository": {
     "type": "git",
-    "url": "https://github.com/duc-lta/workspace-script-runner"
+    "url": "https://github.com/ducdev2k1/workspace-script-runner"
   },
   "engines": {
     "vscode": "^1.85.0"
