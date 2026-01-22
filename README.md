@@ -1,21 +1,47 @@
-# Workspace Script Runner
+<p align="center">
+  <img src="resources/icon.png" alt="Workspace Script Runner" width="128" height="128">
+</p>
 
-Run npm scripts with intuitive UI in VS Code - like WebStorm! 🚀
+<h1 align="center">Workspace Script Runner</h1>
 
-## Features
+<p align="center">
+  <strong>Run npm scripts with intuitive UI in VS Code! 🚀</strong>
+</p>
 
-- 📦 **Multi-root workspace support** - Works with multiple projects
+<p align="center">
+  <a href="https://marketplace.visualstudio.com/items?itemName=duc-lta.workspace-script-runner">
+    <img src="https://img.shields.io/visual-studio-marketplace/v/duc-lta.workspace-script-runner?style=flat-square" alt="Version">
+  </a>
+  <a href="https://marketplace.visualstudio.com/items?itemName=duc-lta.workspace-script-runner">
+    <img src="https://img.shields.io/visual-studio-marketplace/i/duc-lta.workspace-script-runner?style=flat-square" alt="Installs">
+  </a>
+  <a href="https://github.com/duc-lta/workspace-script-runner/blob/main/LICENSE">
+    <img src="https://img.shields.io/github/license/duc-lta/workspace-script-runner?style=flat-square" alt="License">
+  </a>
+</p>
+
+---
+
+## ✨ Features
+
+- 📦 **Multi-root workspace support** - Works with multiple projects simultaneously
 - 🔍 **Auto-detect package manager** - npm, yarn, pnpm, bun
-- ⚡ **One-click run** - Click to run any script
-- 🎨 **Beautiful TreeView** - See all projects and scripts
+- ⚡ **One-click run** - Click to run any script instantly
+- 🎨 **Beautiful TreeView** - See all projects and scripts at a glance
+- 🔄 **Running state indicator** - Know which scripts are currently running
+- 🛑 **Easy stop/restart** - Stop or restart scripts with one click
 
-## Usage
+## 📸 Screenshot
+
+> TreeView showing projects with package manager icons and scripts
+
+## 🚀 Usage
 
 1. Open a folder/workspace with `package.json`
 2. Look for **"Scripts Runner"** in Explorer sidebar
 3. Click on any script to run it!
 
-## Settings
+## ⚙️ Settings
 
 ```json
 {
@@ -27,22 +53,29 @@ Run npm scripts with intuitive UI in VS Code - like WebStorm! 🚀
 }
 ```
 
-## Commands
+| Setting                   | Description                          | Default |
+| ------------------------- | ------------------------------------ | ------- |
+| `defaultPackageManager`   | Default PM when auto-detection fails | `auto`  |
+| `workspacePackageManager` | Override PM for specific projects    | `{}`    |
 
-- `Scripts Runner: Run Script` - Run selected script
-- `Scripts Runner: Stop Script` - Stop running script
-- `Scripts Runner: Restart Script` - Restart script
-- `Scripts Runner: Change Package Manager` - Override package manager
-- `Scripts Runner: Refresh` - Refresh scripts list
+## 🎯 Commands
 
-## Development
+| Command                                  | Description              |
+| ---------------------------------------- | ------------------------ |
+| `Scripts Runner: Run Script`             | Run selected script      |
+| `Scripts Runner: Stop Script`            | Stop running script      |
+| `Scripts Runner: Restart Script`         | Restart script           |
+| `Scripts Runner: Change Package Manager` | Override package manager |
+| `Scripts Runner: Refresh`                | Refresh scripts list     |
+
+## 🛠️ Development
 
 ```bash
-npm install
-npm run compile
+pnpm install
+pnpm run compile
 # Press F5 to launch Extension Development Host
 ```
 
-## License
+## 📄 License
 
-MIT
+MIT © [duc-lta](https://github.com/duc-lta)
