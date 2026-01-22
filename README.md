@@ -9,14 +9,14 @@
 </p>
 
 <p align="center">
-  <a href="https://marketplace.visualstudio.com/items?itemName=duc-lta.workspace-script-runner">
-    <img src="https://img.shields.io/visual-studio-marketplace/v/duc-lta.workspace-script-runner?style=flat-square" alt="Version">
+  <a href="https://marketplace.visualstudio.com/items?itemName=ducdev2k1.workspace-script-runner">
+    <img src="https://img.shields.io/visual-studio-marketplace/v/ducdev2k1.workspace-script-runner?style=flat-square" alt="Version">
   </a>
-  <a href="https://marketplace.visualstudio.com/items?itemName=duc-lta.workspace-script-runner">
-    <img src="https://img.shields.io/visual-studio-marketplace/i/duc-lta.workspace-script-runner?style=flat-square" alt="Installs">
+  <a href="https://marketplace.visualstudio.com/items?itemName=ducdev2k1.workspace-script-runner">
+    <img src="https://img.shields.io/visual-studio-marketplace/i/ducdev2k1.workspace-script-runner?style=flat-square" alt="Installs">
   </a>
-  <a href="https://github.com/duc-lta/workspace-script-runner/blob/main/LICENSE">
-    <img src="https://img.shields.io/github/license/duc-lta/workspace-script-runner?style=flat-square" alt="License">
+  <a href="https://github.com/ducdev2k1/workspace-script-runner/blob/main/LICENSE">
+    <img src="https://img.shields.io/github/license/ducdev2k1/workspace-script-runner?style=flat-square" alt="License">
   </a>
 </p>
 
@@ -75,6 +75,7 @@ npm install
 npm run compile
 # Press F5 to launch Extension Development Host
 ```
+
 ## 📄 License
 
 MIT © [ducdev2k1](https://github.com/ducdev2k1)
