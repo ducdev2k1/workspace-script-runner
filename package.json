@@ -1,0 +1,126 @@
+{
+  "name": "workspace-script-runner",
+  "displayName": "Workspace Script Runner",
+  "description": "Run npm scripts with intuitive UI, multi-root workspace support, and auto package manager detection",
+  "version": "0.0.1",
+  "publisher": "duc-lta",
+  "icon": "resources/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/duc-lta/workspace-script-runner"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "workspaceContains:**/package.json"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "views": {
+      "explorer": [
+        {
+          "id": "scriptsRunnerView",
+          "name": "Scripts Runner",
+          "icon": "$(terminal)",
+          "contextualTitle": "Scripts Runner"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "scriptsRunner.runScript",
+        "title": "Run Script",
+        "category": "Scripts Runner",
+        "icon": "$(play)"
+      },
+      {
+        "command": "scriptsRunner.stopScript",
+        "title": "Stop Script",
+        "category": "Scripts Runner",
+        "icon": "$(debug-stop)"
+      },
+      {
+        "command": "scriptsRunner.restartScript",
+        "title": "Restart Script",
+        "category": "Scripts Runner",
+        "icon": "$(debug-restart)"
+      },
+      {
+        "command": "scriptsRunner.changePackageManager",
+        "title": "Change Package Manager",
+        "category": "Scripts Runner"
+      },
+      {
+        "command": "scriptsRunner.refresh",
+        "title": "Refresh",
+        "category": "Scripts Runner",
+        "icon": "$(refresh)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "scriptsRunner.refresh",
+          "when": "view == scriptsRunnerView",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "scriptsRunner.runScript",
+          "when": "view == scriptsRunnerView && viewItem == script",
+          "group": "inline"
+        },
+        {
+          "command": "scriptsRunner.stopScript",
+          "when": "view == scriptsRunnerView && viewItem == scriptRunning",
+          "group": "inline"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Scripts Runner",
+      "properties": {
+        "scriptsRunner.defaultPackageManager": {
+          "type": "string",
+          "default": "auto",
+          "enum": [
+            "auto",
+            "npm",
+            "yarn",
+            "pnpm",
+            "bun"
+          ],
+          "description": "Default package manager to use when auto-detection fails"
+        },
+        "scriptsRunner.workspacePackageManager": {
+          "type": "object",
+          "default": {},
+          "description": "Override package manager for specific workspace folders. Example: { \"project-a\": \"pnpm\" }"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src",
+    "test": "vscode-test"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^6.13.0",
+    "@typescript-eslint/parser": "^6.13.0",
+    "@vscode/test-cli": "^0.0.4",
+    "@vscode/test-electron": "^2.3.8",
+    "eslint": "^8.54.0",
+    "typescript": "^5.3.2"
+  }
+}
