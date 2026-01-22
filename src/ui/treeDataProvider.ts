@@ -57,31 +57,23 @@ export class ScriptTreeItem extends vscode.TreeItem {
     super(script.name, vscode.TreeItemCollapsibleState.None);
 
     this.isRunning = running;
-    this.description = script.command;
+    // Bỏ description để gọn gàng hơn
+    this.description = "";
     this.contextValue = running ? "scriptRunning" : "script";
-    this.tooltip = running
-      ? `🔄 RUNNING: ${script.name}\n${script.command}`
-      : `▶ ${script.name}: ${script.command}`;
+    this.tooltip = `${script.name}\n📋 ${script.command}`;
 
-    // Icon: loading~spin khi running, play khi idle
-    if (running) {
-      this.iconPath = new vscode.ThemeIcon(
-        "loading~spin",
-        new vscode.ThemeColor("charts.green"),
-      );
-    } else {
-      // Sử dụng custom play icon
-      const playIconPath = path.join(
-        extensionPath,
-        "resources",
-        "icons",
-        "play.svg",
-      );
-      this.iconPath = {
-        light: vscode.Uri.file(playIconPath),
-        dark: vscode.Uri.file(playIconPath),
-      };
-    }
+    // Sử dụng custom SVG icons để giữ màu khi focus
+    const iconName = running ? "pause" : "play";
+    const iconPath = path.join(
+      extensionPath,
+      "resources",
+      "icons",
+      `${iconName}.svg`,
+    );
+    this.iconPath = {
+      light: vscode.Uri.file(iconPath),
+      dark: vscode.Uri.file(iconPath),
+    };
 
     // Command khi click vào script
     this.command = {

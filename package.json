@@ -35,19 +35,28 @@
         "command": "scriptsRunner.runScript",
         "title": "Run Script",
         "category": "Scripts Runner",
-        "icon": "$(play)"
+        "icon": {
+          "light": "resources/icons/play.svg",
+          "dark": "resources/icons/play.svg"
+        }
       },
       {
         "command": "scriptsRunner.stopScript",
         "title": "Stop Script",
         "category": "Scripts Runner",
-        "icon": "$(debug-stop)"
+        "icon": {
+          "light": "resources/icons/stop.svg",
+          "dark": "resources/icons/stop.svg"
+        }
       },
       {
         "command": "scriptsRunner.restartScript",
         "title": "Restart Script",
         "category": "Scripts Runner",
-        "icon": "$(debug-restart)"
+        "icon": {
+          "light": "resources/icons/reload.svg",
+          "dark": "resources/icons/reload.svg"
+        }
       },
       {
         "command": "scriptsRunner.changePackageManager",
@@ -73,12 +82,17 @@
         {
           "command": "scriptsRunner.runScript",
           "when": "view == scriptsRunnerView && viewItem == script",
-          "group": "inline"
+          "group": "inline@1"
         },
         {
           "command": "scriptsRunner.stopScript",
           "when": "view == scriptsRunnerView && viewItem == scriptRunning",
-          "group": "inline"
+          "group": "inline@1"
+        },
+        {
+          "command": "scriptsRunner.restartScript",
+          "when": "view == scriptsRunnerView && viewItem == scriptRunning",
+          "group": "inline@2"
         }
       ]
     },
