@@ -71,9 +71,10 @@
 ## 🛠️ Development
 
 ```bash
-pnpm install
-pnpm run compile
-
+npm install
+npm run compile
+# Press F5 to launch Extension Development Host
+```
 ## 📄 License
 
 MIT © [ducdev2k1](https://github.com/ducdev2k1)
