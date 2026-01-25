@@ -3,12 +3,19 @@
   "displayName": "Workspace Script Runner",
   "description": "Run npm scripts with intuitive UI, multi-root workspace support, and auto package manager detection",
   "version": "1.0.0",
-  "publisher": "ducdev2k1",
+  "publisher": "ducdev2k1-vscode",
+  "openvsx": {
+    "publisher": "ducdev2k1"
+  },
   "icon": "resources/icon.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/ducdev2k1/workspace-script-runner"
   },
+  "bugs": {
+    "url": "https://github.com/ducdev2k1/workspace-script-runner/issues"
+  },
+  "homepage": "https://github.com/ducdev2k1/workspace-script-runner#readme",
   "engines": {
     "vscode": "^1.85.0"
   },

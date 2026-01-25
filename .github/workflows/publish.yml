@@ -48,6 +48,10 @@ jobs:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
         run: pnpm dlx @vscode/vsce publish --pat "$VSCE_PAT"
 
+      - name: Switch Publisher for Open VSX
+        run: |
+          sed -i 's/"publisher": "ducdev2k1-vscode"/"publisher": "ducdev2k1"/' package.json
+
       - name: Publish to Open VSX
         uses: HaaLeo/publish-vscode-extension@v2
         with:
