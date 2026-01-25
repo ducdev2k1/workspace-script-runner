@@ -2,7 +2,7 @@
   "name": "workspace-script-runner",
   "displayName": "Workspace Script Runner",
   "description": "Run npm scripts with intuitive UI, multi-root workspace support, and auto package manager detection",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "publisher": "ducdev2k1-vscode",
   "openvsx": {
     "publisher": "ducdev2k1"
