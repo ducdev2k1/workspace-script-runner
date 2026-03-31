@@ -24,7 +24,7 @@
 
 ## ✨ Features
 
-- 📦 **Multi-root workspace support** - Works with multiple projects simultaneously
+- 📦 **Multi-root & monorepo support** - Works with multiple projects and nested sub-projects (monorepo) simultaneously
 - 🔍 **Auto-detect package manager** - npm, yarn, pnpm, bun
 - ⚡ **One-click run** - Click to run any script instantly
 - 🎨 **Activity Bar sidebar** - Dedicated icon in the Activity Bar for quick access
@@ -42,9 +42,12 @@
 
 ## 🚀 Usage
 
-1. Open a folder/workspace with `package.json`
-2. Look for **"Scripts Runner"** in Explorer sidebar
-3. Click on any script to run it!
+1. Open a folder/workspace with `package.json` (single project **or** monorepo)
+2. Look for the **Scripts Runner** icon in the Activity Bar
+3. Each project/sub-project appears as a separate section with its scripts
+4. Click on any script to run it!
+
+> **Monorepo tip:** Open the root folder (e.g. `my-app/`) — sub-projects with `package.json` are automatically detected as separate zones.
 
 ## ⚙️ Settings
 

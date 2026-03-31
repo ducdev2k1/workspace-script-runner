@@ -3,7 +3,22 @@ import * as path from "path";
 import * as vscode from "vscode";
 import { resolvePackageManager } from "../config";
 import { detectPackageManager } from "../packageManager";
-import { IScriptItem, IWorkspaceProject } from "../types";
+import { IWorkspaceProject } from "../types";
+
+/** Directories to skip when scanning sub-folders (common non-project dirs) */
+const SKIP_DIRS = new Set([
+  "node_modules",
+  ".git",
+  "dist",
+  "build",
+  ".next",
+  "out",
+  "coverage",
+  ".cache",
+  ".vscode",
+  ".idea",
+  ".agent",
+]);
 
 /**
  * Parse package.json và lấy scripts
@@ -22,30 +37,17 @@ export const parsePackageJson = (
 };
 
 /**
- * Scan một workspace folder và lấy thông tin project
- * @param folder - WorkspaceFolder cần scan
+ * Build IWorkspaceProject từ một folder path và tên project
  */
-export const scanWorkspaceFolder = (
-  folder: vscode.WorkspaceFolder,
-): IWorkspaceProject | null => {
-  const packageJsonPath = path.join(folder.uri.fsPath, "package.json");
-
-  // Kiểm tra package.json có tồn tại không
-  if (!fs.existsSync(packageJsonPath)) {
-    return null;
-  }
-
-  const folderPath = folder.uri.fsPath;
-  const projectName = folder.name;
-
-  // Detect package manager
+const buildProject = (
+  folderPath: string,
+  projectName: string,
+  packageJsonPath: string,
+): IWorkspaceProject => {
   const detectedManager = detectPackageManager(folderPath);
   const packageManager = resolvePackageManager(projectName, detectedManager);
-
-  // Parse scripts
   const scripts = parsePackageJson(packageJsonPath);
 
-  // Tạo project object (chưa có scripts để tránh circular reference)
   const project: IWorkspaceProject = {
     name: projectName,
     path: folderPath,
@@ -54,22 +56,67 @@ export const scanWorkspaceFolder = (
     scripts: [],
   };
 
-  // Convert scripts thành IScriptItem array
-  const scriptItems: IScriptItem[] = Object.entries(scripts).map(
-    ([name, command]) => ({
-      name,
-      command,
-      project,
-    }),
-  );
-
-  project.scripts = scriptItems;
+  project.scripts = Object.entries(scripts).map(([name, command]) => ({
+    name,
+    command,
+    project,
+  }));
 
   return project;
 };
 
 /**
- * Scan tất cả workspace folders
+ * Scan root của một workspace folder và lấy thông tin project
+ * @param folder - WorkspaceFolder cần scan
+ */
+export const scanWorkspaceFolder = (
+  folder: vscode.WorkspaceFolder,
+): IWorkspaceProject | null => {
+  const packageJsonPath = path.join(folder.uri.fsPath, "package.json");
+
+  if (!fs.existsSync(packageJsonPath)) {
+    return null;
+  }
+
+  return buildProject(folder.uri.fsPath, folder.name, packageJsonPath);
+};
+
+/**
+ * Scan immediate sub-directories của folderPath để tìm package.json.
+ * Chỉ scan depth=1 (không đệ quy). Bỏ qua các thư mục trong SKIP_DIRS.
+ * @param folderPath - Đường dẫn thư mục cha cần scan
+ */
+export const scanSubFolders = (folderPath: string): IWorkspaceProject[] => {
+  const results: IWorkspaceProject[] = [];
+  let entries: fs.Dirent[];
+
+  try {
+    entries = fs.readdirSync(folderPath, { withFileTypes: true });
+  } catch {
+    return results;
+  }
+
+  for (const entry of entries) {
+    if (!entry.isDirectory() || SKIP_DIRS.has(entry.name)) {
+      continue;
+    }
+
+    const subPath = path.join(folderPath, entry.name);
+    const pkgJsonPath = path.join(subPath, "package.json");
+
+    if (!fs.existsSync(pkgJsonPath)) {
+      continue;
+    }
+
+    results.push(buildProject(subPath, entry.name, pkgJsonPath));
+  }
+
+  return results;
+};
+
+/**
+ * Scan tất cả workspace folders (root + immediate sub-dirs).
+ * Hỗ trợ cả single-project và monorepo workspace.
  */
 export const scanWorkspace = (): IWorkspaceProject[] => {
   const workspaceFolders = vscode.workspace.workspaceFolders;
@@ -81,10 +128,14 @@ export const scanWorkspace = (): IWorkspaceProject[] => {
   const projects: IWorkspaceProject[] = [];
 
   for (const folder of workspaceFolders) {
-    const project = scanWorkspaceFolder(folder);
-    if (project) {
-      projects.push(project);
+    // Scan root workspace folder
+    const rootProject = scanWorkspaceFolder(folder);
+    if (rootProject) {
+      projects.push(rootProject);
     }
+
+    // Scan immediate sub-folders (monorepo support)
+    projects.push(...scanSubFolders(folder.uri.fsPath));
   }
 
   return projects;
