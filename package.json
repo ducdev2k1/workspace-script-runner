@@ -2,7 +2,7 @@
   "name": "workspace-script-runner",
   "displayName": "Workspace Script Runner",
   "description": "Run npm scripts with intuitive UI, multi-root workspace support, and auto package manager detection",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "publisher": "ducdev2k1-vscode",
   "openvsx": {
     "publisher": "ducdev2k1"
@@ -27,13 +27,26 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "scriptsRunnerContainer",
+          "title": "Scripts Runner",
+          "icon": "resources/icons/activity-bar.svg"
+        }
+      ]
+    },
     "views": {
-      "explorer": [
+      "scriptsRunnerContainer": [
         {
           "id": "scriptsRunnerView",
-          "name": "Scripts Runner",
-          "icon": "$(terminal)",
-          "contextualTitle": "Scripts Runner"
+          "name": "All Scripts",
+          "icon": "$(list-tree)"
+        },
+        {
+          "id": "scriptsRunnerRunningView",
+          "name": "Running Scripts",
+          "icon": "$(sync~spin)"
         }
       ]
     },
@@ -75,6 +88,55 @@
         "title": "Refresh",
         "category": "Scripts Runner",
         "icon": "$(refresh)"
+      },
+      {
+        "command": "scriptsRunner.focusTerminal",
+        "title": "Focus Terminal",
+        "category": "Scripts Runner",
+        "icon": "$(terminal)"
+      },
+      {
+        "command": "scriptsRunner.debugScript",
+        "title": "Debug Script",
+        "category": "Scripts Runner",
+        "icon": {
+          "light": "resources/icons/debug.svg",
+          "dark": "resources/icons/debug.svg"
+        }
+      },
+      {
+        "command": "scriptsRunner.pinScript",
+        "title": "Pin to Favorites",
+        "category": "Scripts Runner",
+        "icon": "$(star-empty)"
+      },
+      {
+        "command": "scriptsRunner.unpinScript",
+        "title": "Unpin from Favorites",
+        "category": "Scripts Runner",
+        "icon": "$(star-full)"
+      },
+      {
+        "command": "scriptsRunner.copyCommand",
+        "title": "Copy Command",
+        "category": "Scripts Runner",
+        "icon": "$(copy)"
+      }
+    ],
+    "taskDefinitions": [
+      {
+        "type": "script-runner",
+        "required": ["script", "folder"],
+        "properties": {
+          "script": {
+            "type": "string",
+            "description": "Script name from package.json"
+          },
+          "folder": {
+            "type": "string",
+            "description": "Absolute path to the project folder"
+          }
+        }
       }
     ],
     "menus": {
@@ -88,18 +150,58 @@
       "view/item/context": [
         {
           "command": "scriptsRunner.runScript",
-          "when": "view == scriptsRunnerView && viewItem == script",
+          "when": "view == scriptsRunnerView && (viewItem == script || viewItem == scriptFavorite)",
           "group": "inline@1"
         },
         {
+          "command": "scriptsRunner.debugScript",
+          "when": "view == scriptsRunnerView && (viewItem == script || viewItem == scriptFavorite)",
+          "group": "inline@2"
+        },
+        {
           "command": "scriptsRunner.stopScript",
-          "when": "view == scriptsRunnerView && viewItem == scriptRunning",
+          "when": "view == scriptsRunnerView && (viewItem == scriptRunning || viewItem == scriptFavoriteRunning)",
           "group": "inline@1"
         },
         {
           "command": "scriptsRunner.restartScript",
-          "when": "view == scriptsRunnerView && viewItem == scriptRunning",
+          "when": "view == scriptsRunnerView && (viewItem == scriptRunning || viewItem == scriptFavoriteRunning)",
           "group": "inline@2"
+        },
+        {
+          "command": "scriptsRunner.stopScript",
+          "when": "view == scriptsRunnerView && (viewItem == scriptDebugging || viewItem == scriptFavoriteDebugging)",
+          "group": "inline@1"
+        },
+        {
+          "command": "scriptsRunner.pinScript",
+          "when": "view == scriptsRunnerView && (viewItem == script || viewItem == scriptRunning || viewItem == scriptDebugging)",
+          "group": "context@1"
+        },
+        {
+          "command": "scriptsRunner.unpinScript",
+          "when": "view == scriptsRunnerView && (viewItem == scriptFavorite || viewItem == scriptFavoriteRunning || viewItem == scriptFavoriteDebugging)",
+          "group": "context@1"
+        },
+        {
+          "command": "scriptsRunner.copyCommand",
+          "when": "view == scriptsRunnerView",
+          "group": "context@2"
+        },
+        {
+          "command": "scriptsRunner.stopScript",
+          "when": "view == scriptsRunnerRunningView && viewItem == runningScript",
+          "group": "inline@1"
+        },
+        {
+          "command": "scriptsRunner.restartScript",
+          "when": "view == scriptsRunnerRunningView && viewItem == runningScript",
+          "group": "inline@2"
+        },
+        {
+          "command": "scriptsRunner.focusTerminal",
+          "when": "view == scriptsRunnerRunningView && viewItem == runningScript",
+          "group": "inline@3"
         }
       ]
     },

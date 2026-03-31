@@ -1,9 +1,18 @@
 import * as vscode from "vscode";
+import { launchDebug } from "./debug";
+import { ScriptRunnerTaskProvider } from "./tasks";
 import { TerminalManager } from "./terminal";
-import { ScriptsTreeDataProvider, ScriptTreeItem } from "./ui";
+import {
+  RunningScriptsProvider,
+  ScriptsTreeDataProvider,
+  ScriptTreeItem,
+} from "./ui";
+import { IScriptItem } from "./types";
+import { getRunCommand } from "./packageManager";
 import { watchPackageJson } from "./workspace";
 
 let treeDataProvider: ScriptsTreeDataProvider;
+let runningScriptsProvider: RunningScriptsProvider;
 let terminalManager: TerminalManager;
 let packageJsonWatcher: vscode.FileSystemWatcher;
 
@@ -13,16 +22,31 @@ let packageJsonWatcher: vscode.FileSystemWatcher;
 export function activate(context: vscode.ExtensionContext): void {
   console.log("Scripts Runner is now active!");
 
-  // Initialize providers với extensionPath
-  treeDataProvider = new ScriptsTreeDataProvider(context.extensionPath);
+  // Initialize providers
+  treeDataProvider = new ScriptsTreeDataProvider(context.extensionPath, context.workspaceState);
+  runningScriptsProvider = new RunningScriptsProvider();
   terminalManager = new TerminalManager();
 
-  // Register TreeView
+  // Register All Scripts TreeView
   const treeView = vscode.window.createTreeView("scriptsRunnerView", {
     treeDataProvider,
     showCollapseAll: true,
   });
   context.subscriptions.push(treeView);
+
+  // Register Running Scripts TreeView
+  const runningView = vscode.window.createTreeView("scriptsRunnerRunningView", {
+    treeDataProvider: runningScriptsProvider,
+  });
+  context.subscriptions.push(runningView);
+
+  // Sync running scripts view khi state thay đổi
+  const runningChangeListener = treeDataProvider.onRunningScriptsChange(
+    (scripts: IScriptItem[]) => {
+      runningScriptsProvider.update(scripts);
+    },
+  );
+  context.subscriptions.push(runningChangeListener);
 
   // Watch package.json changes
   packageJsonWatcher = watchPackageJson(() => {
@@ -174,6 +198,103 @@ function registerCommands(context: vscode.ExtensionContext): void {
     },
   );
   context.subscriptions.push(refreshCommand);
+
+  // Focus Terminal (từ Running Scripts view)
+  const focusTerminalCommand = vscode.commands.registerCommand(
+    "scriptsRunner.focusTerminal",
+    (script: IScriptItem) => {
+      if (script) {
+        terminalManager.focusTerminal(script);
+      }
+    },
+  );
+  context.subscriptions.push(focusTerminalCommand);
+
+  // Debug Script — launch VS Code debugger
+  const debugScriptCommand = vscode.commands.registerCommand(
+    "scriptsRunner.debugScript",
+    async (item: ScriptTreeItem) => {
+      if (item?.script) {
+        const success = await launchDebug(item.script);
+        if (success) {
+          treeDataProvider.setScriptDebugging(
+            item.script.project.name,
+            item.script.name,
+            true,
+          );
+          vscode.window.showInformationMessage(
+            `🐛 Debugging: ${item.script.project.name}/${item.script.name}`,
+          );
+        }
+      }
+    },
+  );
+  context.subscriptions.push(debugScriptCommand);
+
+  // Lắng nghe debug session kết thúc để clear debugging state
+  const debugEndListener = vscode.debug.onDidTerminateDebugSession((session) => {
+    // Tên session theo format "Debug: projectName/scriptName"
+    const match = session.name.match(/^Debug: (.+?)\/(.+)$/);
+    if (match) {
+      treeDataProvider.setScriptDebugging(match[1], match[2], false);
+    }
+  });
+  context.subscriptions.push(debugEndListener);
+
+  // Pin to Favorites
+  const pinScriptCommand = vscode.commands.registerCommand(
+    "scriptsRunner.pinScript",
+    async (item: ScriptTreeItem) => {
+      if (item?.script) {
+        await treeDataProvider.toggleFavorite(item.script.project.name, item.script.name);
+        vscode.window.showInformationMessage(
+          `★ Pinned: ${item.script.project.name}/${item.script.name}`,
+        );
+      }
+    },
+  );
+  context.subscriptions.push(pinScriptCommand);
+
+  // Unpin from Favorites
+  const unpinScriptCommand = vscode.commands.registerCommand(
+    "scriptsRunner.unpinScript",
+    async (item: ScriptTreeItem) => {
+      if (item?.script) {
+        await treeDataProvider.toggleFavorite(item.script.project.name, item.script.name);
+        vscode.window.showInformationMessage(
+          `☆ Unpinned: ${item.script.project.name}/${item.script.name}`,
+        );
+      }
+    },
+  );
+  context.subscriptions.push(unpinScriptCommand);
+
+  // Copy Command to clipboard
+  const copyCommandCommand = vscode.commands.registerCommand(
+    "scriptsRunner.copyCommand",
+    (item: ScriptTreeItem) => {
+      if (item?.script) {
+        const fullCmd = getRunCommand(
+          item.script.project.packageManager,
+          item.script.name,
+        );
+        vscode.env.clipboard.writeText(fullCmd);
+        vscode.window.showInformationMessage(`Copied: ${fullCmd}`);
+      }
+    },
+  );
+  context.subscriptions.push(copyCommandCommand);
+
+  // VS Code Task Provider
+  const taskProvider = new ScriptRunnerTaskProvider(
+    () => treeDataProvider.getAllScripts(),
+    terminalManager,
+  );
+  const taskProviderDisposable = vscode.tasks.registerTaskProvider(
+    ScriptRunnerTaskProvider.taskType,
+    taskProvider,
+  );
+  context.subscriptions.push(taskProviderDisposable);
 }
 
 /**

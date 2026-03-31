@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
+  <!-- Antennae -->
+  <line x1="6.2" y1="2.5" x2="4" y2="0.8" stroke="#F44747" stroke-width="1.2" stroke-linecap="round"/>
+  <line x1="9.8" y1="2.5" x2="12" y2="0.8" stroke="#F44747" stroke-width="1.2" stroke-linecap="round"/>
+  <!-- Head -->
+  <circle cx="8" cy="4" r="2.2" fill="#F44747"/>
+  <!-- Body -->
+  <ellipse cx="8" cy="10" rx="4" ry="5" fill="#F44747"/>
+  <!-- Wing split line -->
+  <line x1="8" y1="5.5" x2="8" y2="15" stroke="#CC2222" stroke-width="0.8" stroke-linecap="round"/>
+  <!-- Spots -->
+  <circle cx="6.2" cy="9" r="0.9" fill="#CC2222"/>
+  <circle cx="9.8" cy="9" r="0.9" fill="#CC2222"/>
+  <circle cx="6.2" cy="12" r="0.9" fill="#CC2222"/>
+  <circle cx="9.8" cy="12" r="0.9" fill="#CC2222"/>
+  <!-- Legs -->
+  <line x1="4" y1="8"  x2="1.5" y2="7"   stroke="#F44747" stroke-width="1" stroke-linecap="round"/>
+  <line x1="4" y1="10" x2="1.5" y2="10"  stroke="#F44747" stroke-width="1" stroke-linecap="round"/>
+  <line x1="4" y1="12" x2="1.5" y2="13"  stroke="#F44747" stroke-width="1" stroke-linecap="round"/>
+  <line x1="12" y1="8"  x2="14.5" y2="7"  stroke="#F44747" stroke-width="1" stroke-linecap="round"/>
+  <line x1="12" y1="10" x2="14.5" y2="10" stroke="#F44747" stroke-width="1" stroke-linecap="round"/>
+  <line x1="12" y1="12" x2="14.5" y2="13" stroke="#F44747" stroke-width="1" stroke-linecap="round"/>
+</svg>

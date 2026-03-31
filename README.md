@@ -27,9 +27,14 @@
 - 📦 **Multi-root workspace support** - Works with multiple projects simultaneously
 - 🔍 **Auto-detect package manager** - npm, yarn, pnpm, bun
 - ⚡ **One-click run** - Click to run any script instantly
-- 🎨 **Beautiful TreeView** - See all projects and scripts at a glance
+- 🎨 **Activity Bar sidebar** - Dedicated icon in the Activity Bar for quick access
+- 📋 **Running Scripts panel** - See all currently running scripts at a glance
 - 🔄 **Running state indicator** - Know which scripts are currently running
 - 🛑 **Easy stop/restart** - Stop or restart scripts with one click
+- 🐞 **Debug Script** - Launch VS Code debugger directly from any script
+- ⭐ **Favorites / Pin** - Pin frequently used scripts to the top of the list
+- 📋 **Copy Command** - Right-click any script to copy the full command (e.g. `pnpm run build`)
+- 🔗 **VS Code Task integration** - Scripts appear in "Tasks: Run Task" palette
 
 ## 📸 Screenshot
 
@@ -60,13 +65,17 @@
 
 ## 🎯 Commands
 
-| Command                                  | Description              |
-| ---------------------------------------- | ------------------------ |
-| `Scripts Runner: Run Script`             | Run selected script      |
-| `Scripts Runner: Stop Script`            | Stop running script      |
-| `Scripts Runner: Restart Script`         | Restart script           |
-| `Scripts Runner: Change Package Manager` | Override package manager |
-| `Scripts Runner: Refresh`                | Refresh scripts list     |
+| Command                                  | Description                          |
+| ---------------------------------------- | ------------------------------------ |
+| `Scripts Runner: Run Script`             | Run selected script                  |
+| `Scripts Runner: Stop Script`            | Stop running script                  |
+| `Scripts Runner: Restart Script`         | Restart script                       |
+| `Scripts Runner: Debug Script`           | Launch VS Code debugger for script   |
+| `Scripts Runner: Pin to Favorites`       | Pin script to top of list            |
+| `Scripts Runner: Unpin from Favorites`   | Remove script from favorites         |
+| `Scripts Runner: Copy Command`           | Copy full run command to clipboard   |
+| `Scripts Runner: Change Package Manager` | Override package manager for project |
+| `Scripts Runner: Refresh`                | Refresh scripts list                 |
 
 ## 🛠️ Development
 

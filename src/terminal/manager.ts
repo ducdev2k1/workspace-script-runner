@@ -88,6 +88,17 @@ export class TerminalManager {
   }
 
   /**
+   * Focus terminal của một script (dùng khi click từ Running Scripts view)
+   */
+  focusTerminal(script: IScriptItem): void {
+    const key = this.getTerminalKey(script.project, script.name);
+    const terminal = this.terminals.get(key);
+    if (terminal) {
+      terminal.show();
+    }
+  }
+
+  /**
    * Dispose tất cả terminals
    */
   dispose(): void {
