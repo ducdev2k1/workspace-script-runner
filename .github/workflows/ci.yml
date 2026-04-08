@@ -41,6 +41,9 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
+    outputs:
+      new_tag: ${{ steps.check.outputs.new_tag }}
+      version: ${{ steps.version.outputs.version }}
 
     steps:
       - name: Checkout code
@@ -55,13 +58,60 @@ jobs:
         run: |
           git fetch --tags
           if git tag -l "${{ steps.version.outputs.version }}" | grep -q .; then
-            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "new_tag=false" >> "$GITHUB_OUTPUT"
           else
-            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "new_tag=true" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Create and push tag
-        if: steps.check.outputs.exists == 'false'
+        if: steps.check.outputs.new_tag == 'true'
         run: |
           git tag "${{ steps.version.outputs.version }}"
           git push origin "${{ steps.version.outputs.version }}"
+
+  publish:
+    needs: tag
+    runs-on: ubuntu-latest
+    if: needs.tag.outputs.new_tag == 'true'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Enable pnpm via corepack
+        run: corepack enable pnpm
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Compile TypeScript
+        run: pnpm run compile
+
+      - name: Package Extension
+        run: pnpm dlx @vscode/vsce package
+
+      - name: Publish to VS Code Marketplace
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+        run: pnpm dlx @vscode/vsce publish --pat "$VSCE_PAT"
+
+      - name: Switch Publisher for Open VSX
+        run: |
+          sed -i 's/"publisher": "ducdev2k1-vscode"/"publisher": "ducdev2k1"/' package.json
+
+      - name: Publish to Open VSX
+        uses: HaaLeo/publish-vscode-extension@v2
+        with:
+          pat: ${{ secrets.OPEN_VSX_TOKEN }}
+          registryUrl: https://open-vsx.org
+
+      - name: Upload VSIX artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: workspace-script-runner
+          path: "*.vsix"
