@@ -15,6 +15,8 @@ let treeDataProvider: ScriptsTreeDataProvider;
 let runningScriptsProvider: RunningScriptsProvider;
 let terminalManager: TerminalManager;
 let packageJsonWatcher: vscode.FileSystemWatcher;
+/** Track debug sessions by name so we can stop the correct one */
+const debugSessions = new Map<string, vscode.DebugSession>();
 
 /**
  * Extension được activate khi workspace có package.json
@@ -94,19 +96,27 @@ function registerCommands(context: vscode.ExtensionContext): void {
   );
   context.subscriptions.push(runScriptCommand);
 
-  // Stop Script
+  // Stop Script — handles both terminal-run and debug sessions
   const stopScriptCommand = vscode.commands.registerCommand(
     "scriptsRunner.stopScript",
     (item: ScriptTreeItem) => {
       if (item && item.script) {
-        terminalManager.stopScript(item.script);
-        treeDataProvider.setScriptRunning(
-          item.script.project.name,
-          item.script.name,
-          false,
-        );
+        const { name: scriptName, project } = item.script;
+        const projectName = project.name;
+
+        if (treeDataProvider.isScriptDebugging(projectName, scriptName)) {
+          // Look up tracked session first, fall back to active session
+          const debugName = `Debug: ${projectName}/${scriptName}`;
+          const tracked = debugSessions.get(debugName);
+          vscode.debug.stopDebugging(tracked);
+          treeDataProvider.setScriptDebugging(projectName, scriptName, false);
+        } else {
+          terminalManager.stopScript(item.script);
+        }
+
+        treeDataProvider.setScriptRunning(projectName, scriptName, false);
         vscode.window.showInformationMessage(
-          `⏹ Stopped: ${item.script.project.name}/${item.script.name}`,
+          `⏹ Stopped: ${projectName}/${scriptName}`,
         );
       }
     },
@@ -231,9 +241,17 @@ function registerCommands(context: vscode.ExtensionContext): void {
   );
   context.subscriptions.push(debugScriptCommand);
 
-  // Lắng nghe debug session kết thúc để clear debugging state
+  // Track debug sessions by name for targeted stop
+  const debugStartListener = vscode.debug.onDidStartDebugSession((session) => {
+    if (session.name.startsWith("Debug: ")) {
+      debugSessions.set(session.name, session);
+    }
+  });
+  context.subscriptions.push(debugStartListener);
+
+  // Clear debug state and tracked session on terminate
   const debugEndListener = vscode.debug.onDidTerminateDebugSession((session) => {
-    // Tên session theo format "Debug: projectName/scriptName"
+    debugSessions.delete(session.name);
     const match = session.name.match(/^Debug: (.+?)\/(.+)$/);
     if (match) {
       treeDataProvider.setScriptDebugging(match[1], match[2], false);

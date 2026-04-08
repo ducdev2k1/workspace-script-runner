@@ -1,19 +1,8 @@
 name: Publish Extension
 
 on:
-  release:
-    types: [published]
-  workflow_dispatch:
-    inputs:
-      version:
-        description: "Version type (patch, minor, major)"
-        required: false
-        default: "patch"
-        type: choice
-        options:
-          - patch
-          - minor
-          - major
+  push:
+    tags: ["v*"]
 
 jobs:
   publish:
@@ -39,6 +28,9 @@ jobs:
 
       - name: Run ESLint
         run: pnpm run lint
+
+      - name: Run unit tests
+        run: pnpm test:unit
 
       - name: Package Extension
         run: pnpm dlx @vscode/vsce package
