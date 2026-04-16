@@ -1,14 +1,14 @@
 import * as vscode from "vscode";
 import { launchDebug } from "./debug";
+import { getRunCommand } from "./packageManager";
 import { ScriptRunnerTaskProvider } from "./tasks";
 import { TerminalManager } from "./terminal";
+import { IScriptItem } from "./types";
 import {
   RunningScriptsProvider,
   ScriptsTreeDataProvider,
   ScriptTreeItem,
 } from "./ui";
-import { IScriptItem } from "./types";
-import { getRunCommand } from "./packageManager";
 import { watchPackageJson } from "./workspace";
 
 let treeDataProvider: ScriptsTreeDataProvider;
@@ -20,10 +20,11 @@ let packageJsonWatcher: vscode.FileSystemWatcher;
  * Extension được activate khi workspace có package.json
  */
 export function activate(context: vscode.ExtensionContext): void {
-  console.log("Scripts Runner is now active!");
-
   // Initialize providers
-  treeDataProvider = new ScriptsTreeDataProvider(context.extensionPath, context.workspaceState);
+  treeDataProvider = new ScriptsTreeDataProvider(
+    context.extensionPath,
+    context.workspaceState,
+  );
   runningScriptsProvider = new RunningScriptsProvider();
   terminalManager = new TerminalManager();
 
@@ -54,9 +55,9 @@ export function activate(context: vscode.ExtensionContext): void {
   });
   context.subscriptions.push(packageJsonWatcher);
 
-  // Xử lý khi terminal đóng - update running state
+  // Xử lý khi terminal đóng (trash icon, dispose) - update running state
   const terminalCloseListener = vscode.window.onDidCloseTerminal((terminal) => {
-    const scriptInfo = terminalManager.handleTerminalClosed(terminal);
+    const scriptInfo = terminalManager.removeTerminal(terminal);
     if (scriptInfo) {
       treeDataProvider.setScriptRunning(
         scriptInfo.projectName,
@@ -66,6 +67,22 @@ export function activate(context: vscode.ExtensionContext): void {
     }
   });
   context.subscriptions.push(terminalCloseListener);
+
+  // Detect khi command kết thúc trong terminal (Ctrl+C, process exit, script done)
+  // Shell Integration API (VS Code 1.93+)
+  const shellExecEndListener = vscode.window.onDidEndTerminalShellExecution(
+    (event) => {
+      const scriptInfo = terminalManager.findScriptByTerminal(event.terminal);
+      if (scriptInfo) {
+        treeDataProvider.setScriptRunning(
+          scriptInfo.projectName,
+          scriptInfo.scriptName,
+          false,
+        );
+      }
+    },
+  );
+  context.subscriptions.push(shellExecEndListener);
 
   // Register commands
   registerCommands(context);
@@ -78,9 +95,9 @@ function registerCommands(context: vscode.ExtensionContext): void {
   // Run Script
   const runScriptCommand = vscode.commands.registerCommand(
     "scriptsRunner.runScript",
-    (item: ScriptTreeItem) => {
+    async (item: ScriptTreeItem) => {
       if (item && item.script) {
-        terminalManager.runScript(item.script);
+        await terminalManager.runScript(item.script);
         treeDataProvider.setScriptRunning(
           item.script.project.name,
           item.script.name,
@@ -116,9 +133,10 @@ function registerCommands(context: vscode.ExtensionContext): void {
   // Restart Script
   const restartScriptCommand = vscode.commands.registerCommand(
     "scriptsRunner.restartScript",
-    (item: ScriptTreeItem) => {
+    async (item: ScriptTreeItem) => {
       if (item && item.script) {
-        terminalManager.restartScript(item.script);
+        terminalManager.stopScript(item.script);
+        await terminalManager.runScript(item.script);
         treeDataProvider.setScriptRunning(
           item.script.project.name,
           item.script.name,
@@ -232,13 +250,15 @@ function registerCommands(context: vscode.ExtensionContext): void {
   context.subscriptions.push(debugScriptCommand);
 
   // Lắng nghe debug session kết thúc để clear debugging state
-  const debugEndListener = vscode.debug.onDidTerminateDebugSession((session) => {
-    // Tên session theo format "Debug: projectName/scriptName"
-    const match = session.name.match(/^Debug: (.+?)\/(.+)$/);
-    if (match) {
-      treeDataProvider.setScriptDebugging(match[1], match[2], false);
-    }
-  });
+  const debugEndListener = vscode.debug.onDidTerminateDebugSession(
+    (session) => {
+      // Tên session theo format "Debug: projectName/scriptName"
+      const match = session.name.match(/^Debug: (.+?)\/(.+)$/);
+      if (match) {
+        treeDataProvider.setScriptDebugging(match[1], match[2], false);
+      }
+    },
+  );
   context.subscriptions.push(debugEndListener);
 
   // Pin to Favorites
@@ -246,7 +266,10 @@ function registerCommands(context: vscode.ExtensionContext): void {
     "scriptsRunner.pinScript",
     async (item: ScriptTreeItem) => {
       if (item?.script) {
-        await treeDataProvider.toggleFavorite(item.script.project.name, item.script.name);
+        await treeDataProvider.toggleFavorite(
+          item.script.project.name,
+          item.script.name,
+        );
         vscode.window.showInformationMessage(
           `★ Pinned: ${item.script.project.name}/${item.script.name}`,
         );
@@ -260,7 +283,10 @@ function registerCommands(context: vscode.ExtensionContext): void {
     "scriptsRunner.unpinScript",
     async (item: ScriptTreeItem) => {
       if (item?.script) {
-        await treeDataProvider.toggleFavorite(item.script.project.name, item.script.name);
+        await treeDataProvider.toggleFavorite(
+          item.script.project.name,
+          item.script.name,
+        );
         vscode.window.showInformationMessage(
           `☆ Unpinned: ${item.script.project.name}/${item.script.name}`,
         );

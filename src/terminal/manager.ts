@@ -2,8 +2,12 @@ import * as vscode from "vscode";
 import { getRunCommand } from "../packageManager";
 import { IScriptItem, IWorkspaceProject } from "../types";
 
+// Separator cho terminal key — dùng "||" thay ":" để tránh conflict với script name chứa ":"
+const KEY_SEPARATOR = "||";
+
 /**
- * Manager quản lý terminals cho từng project
+ * Manager quản lý terminals cho từng project.
+ * Sử dụng Shell Integration API (VS Code 1.93+) để detect khi command kết thúc.
  */
 export class TerminalManager {
   private terminals: Map<string, vscode.Terminal> = new Map();
@@ -15,7 +19,18 @@ export class TerminalManager {
     project: IWorkspaceProject,
     scriptName: string,
   ): string {
-    return `${project.name}:${scriptName}`;
+    return `${project.name}${KEY_SEPARATOR}${scriptName}`;
+  }
+
+  /**
+   * Parse key thành projectName và scriptName
+   */
+  parseTerminalKey(key: string): { projectName: string; scriptName: string } {
+    const idx = key.indexOf(KEY_SEPARATOR);
+    return {
+      projectName: key.substring(0, idx),
+      scriptName: key.substring(idx + KEY_SEPARATOR.length),
+    };
   }
 
   /**
@@ -29,33 +44,75 @@ export class TerminalManager {
   }
 
   /**
-   * Chạy script trong terminal
+   * Chạy script trong terminal.
+   * Dùng shellIntegration.executeCommand() nếu available, fallback sendText().
    */
-  runScript(script: IScriptItem): vscode.Terminal {
+  async runScript(script: IScriptItem): Promise<vscode.Terminal> {
     const key = this.getTerminalKey(script.project, script.name);
 
-    // Kiểm tra terminal đã tồn tại chưa
-    let terminal = this.terminals.get(key);
-
-    if (terminal) {
-      // Dispose terminal cũ
-      terminal.dispose();
+    // Xóa khỏi map TRƯỚC khi dispose để tránh race condition với onDidCloseTerminal
+    const existing = this.terminals.get(key);
+    if (existing) {
+      this.terminals.delete(key);
+      existing.dispose();
     }
 
     // Tạo terminal mới
-    terminal = vscode.window.createTerminal({
+    const terminal = vscode.window.createTerminal({
       name: this.getTerminalName(script.project, script.name),
       cwd: script.project.path,
     });
-
     this.terminals.set(key, terminal);
 
-    // Lấy command và chạy
+    // Lấy command
     const command = getRunCommand(script.project.packageManager, script.name);
-    terminal.sendText(command);
-    terminal.show();
 
+    // Thử dùng Shell Integration, fallback sendText
+    let shellIntegration = terminal.shellIntegration;
+    if (!shellIntegration) {
+      // Wait cho shell integration sẵn sàng (timeout 3s)
+      await this.waitForShellIntegration(terminal, 3000);
+      shellIntegration = terminal.shellIntegration;
+    }
+
+    if (shellIntegration) {
+      shellIntegration.executeCommand(command);
+    } else {
+      terminal.sendText(command);
+    }
+
+    terminal.show();
     return terminal;
+  }
+
+  /**
+   * Chờ shellIntegration available trên terminal
+   */
+  private waitForShellIntegration(
+    terminal: vscode.Terminal,
+    timeoutMs: number,
+  ): Promise<boolean> {
+    return new Promise((resolve) => {
+      if (terminal.shellIntegration) {
+        resolve(true);
+        return;
+      }
+
+      const timer = setTimeout(() => {
+        disposable.dispose();
+        resolve(false);
+      }, timeoutMs);
+
+      const disposable = vscode.window.onDidChangeTerminalShellIntegration(
+        (e) => {
+          if (e.terminal === terminal) {
+            clearTimeout(timer);
+            disposable.dispose();
+            resolve(true);
+          }
+        },
+      );
+    });
   }
 
   /**
@@ -66,25 +123,9 @@ export class TerminalManager {
     const terminal = this.terminals.get(key);
 
     if (terminal) {
-      terminal.dispose();
       this.terminals.delete(key);
+      terminal.dispose();
     }
-  }
-
-  /**
-   * Restart script
-   */
-  restartScript(script: IScriptItem): vscode.Terminal {
-    this.stopScript(script);
-    return this.runScript(script);
-  }
-
-  /**
-   * Kiểm tra script có đang chạy không
-   */
-  isRunning(script: IScriptItem): boolean {
-    const key = this.getTerminalKey(script.project, script.name);
-    return this.terminals.has(key);
   }
 
   /**
@@ -102,26 +143,37 @@ export class TerminalManager {
    * Dispose tất cả terminals
    */
   dispose(): void {
-    Array.from(this.terminals.values()).forEach((terminal) => {
+    for (const terminal of this.terminals.values()) {
       terminal.dispose();
-    });
+    }
     this.terminals.clear();
   }
 
   /**
-   * Xử lý khi terminal bị đóng
-   * @returns Thông tin script nếu tìm thấy, null nếu không
+   * Tìm script info từ terminal object (không xóa khỏi map)
    */
-  handleTerminalClosed(
+  findScriptByTerminal(
+    terminal: vscode.Terminal,
+  ): { projectName: string; scriptName: string } | null {
+    for (const [key, t] of this.terminals.entries()) {
+      if (t === terminal) {
+        return this.parseTerminalKey(key);
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Xóa terminal khỏi map và trả về script info.
+   * Dùng khi terminal bị đóng (onDidCloseTerminal).
+   */
+  removeTerminal(
     closedTerminal: vscode.Terminal,
   ): { projectName: string; scriptName: string } | null {
-    const entries = Array.from(this.terminals.entries());
-    for (const [key, terminal] of entries) {
+    for (const [key, terminal] of this.terminals.entries()) {
       if (terminal === closedTerminal) {
         this.terminals.delete(key);
-        // Parse key để lấy projectName và scriptName
-        const [projectName, scriptName] = key.split(":");
-        return { projectName, scriptName };
+        return this.parseTerminalKey(key);
       }
     }
     return null;

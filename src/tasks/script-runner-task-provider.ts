@@ -54,7 +54,7 @@ export class ScriptRunnerTaskProvider implements vscode.TaskProvider {
       `${script.project.name}: ${script.name}`,
       "Scripts Runner",
       new vscode.CustomExecution(async () => {
-        terminalManager.runScript(script);
+        await terminalManager.runScript(script);
         // Pseudo-terminal minimal — output thực tế ở trong terminal của TerminalManager
         const writeEmitter = new vscode.EventEmitter<string>();
         return {

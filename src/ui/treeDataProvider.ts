@@ -130,14 +130,36 @@ export class ScriptsTreeDataProvider implements vscode.TreeDataProvider<TypeTree
   constructor(extensionPath: string, workspaceState: vscode.Memento) {
     this.extensionPath = extensionPath;
     this.workspaceState = workspaceState;
+    this.migrateFavoritesKeys();
     this.refresh();
+  }
+
+  /**
+   * One-time migration: chuyển favorites key từ separator ":" sang "||"
+   */
+  private migrateFavoritesKeys(): void {
+    const stored = this.workspaceState.get<string[]>(
+      ScriptsTreeDataProvider.FAVORITES_KEY,
+      [],
+    );
+    // Chỉ migrate nếu có key dùng separator cũ (chứa ":" nhưng không chứa "||")
+    const needsMigration = stored.some((k) => k.includes(":") && !k.includes("||"));
+    if (needsMigration) {
+      const migrated = stored.map((k) => {
+        if (k.includes("||")) { return k; }
+        // Replace CHỈ separator đầu tiên ":" → "||"
+        const idx = k.indexOf(":");
+        return idx >= 0 ? k.substring(0, idx) + "||" + k.substring(idx + 1) : k;
+      });
+      this.workspaceState.update(ScriptsTreeDataProvider.FAVORITES_KEY, migrated);
+    }
   }
 
   /**
    * Tạo unique key cho script
    */
   private getScriptKey(projectName: string, scriptName: string): string {
-    return `${projectName}:${scriptName}`;
+    return `${projectName}||${scriptName}`;
   }
 
   /**
