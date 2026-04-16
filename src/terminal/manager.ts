@@ -116,16 +116,42 @@ export class TerminalManager {
   }
 
   /**
-   * Stop script (dispose terminal)
+   * Stop script — send SIGINT (Ctrl+C) before disposing to ensure child process is killed
    */
   stopScript(script: IScriptItem): void {
     const key = this.getTerminalKey(script.project, script.name);
     const terminal = this.terminals.get(key);
 
     if (terminal) {
+      // Send Ctrl+C to gracefully stop the child process (e.g. node server)
+      terminal.sendText("\x03", false);
       this.terminals.delete(key);
       terminal.dispose();
     }
+  }
+
+  /**
+   * Restart script — kill old process then start new one
+   */
+  async restartScript(script: IScriptItem): Promise<vscode.Terminal> {
+    const key = this.getTerminalKey(script.project, script.name);
+    const existing = this.terminals.get(key);
+
+    if (existing) {
+      existing.sendText("\x03", false);
+      existing.dispose();
+      this.terminals.delete(key);
+    }
+
+    return await this.runScript(script);
+  }
+
+  /**
+   * Kiểm tra script có đang chạy không
+   */
+  isRunning(script: IScriptItem): boolean {
+    const key = this.getTerminalKey(script.project, script.name);
+    return this.terminals.has(key);
   }
 
   /**

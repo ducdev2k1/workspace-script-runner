@@ -61,20 +61,30 @@ export class ScriptTreeItem extends vscode.TreeItem {
 
     this.isRunning = running;
     this.isDebugging = debugging;
-    // Hiển thị ★ trước tên nếu là favorite
     this.description = favorite ? "★" : "";
 
-    if (debugging) {
-      this.contextValue = "scriptDebugging";
-    } else if (running) {
-      this.contextValue = "scriptRunning";
+    // Build contextValue matching package.json menu `when` conditions
+    // e.g. "script", "scriptRunning", "scriptFavorite", "scriptFavoriteRunning"
+    if (favorite) {
+      if (debugging) {
+        this.contextValue = "scriptFavoriteDebugging";
+      } else if (running) {
+        this.contextValue = "scriptFavoriteRunning";
+      } else {
+        this.contextValue = "scriptFavorite";
+      }
     } else {
-      this.contextValue = "script";
+      if (debugging) {
+        this.contextValue = "scriptDebugging";
+      } else if (running) {
+        this.contextValue = "scriptRunning";
+      } else {
+        this.contextValue = "script";
+      }
     }
 
     this.tooltip = `${script.name}\n📋 ${script.command}`;
 
-    // Icon: debug icon khi đang debug, pause khi running, play khi idle
     const iconName = debugging ? "debug" : running ? "pause" : "play";
     const iconPath = path.join(
       extensionPath,
@@ -86,11 +96,6 @@ export class ScriptTreeItem extends vscode.TreeItem {
       light: vscode.Uri.file(iconPath),
       dark: vscode.Uri.file(iconPath),
     };
-
-    // Thêm suffix "Favorite" vào contextValue nếu được ghim
-    if (favorite) {
-      this.contextValue += "Favorite";
-    }
 
     // Command khi click: stop nếu running/debugging, run nếu idle
     const isActive = running || debugging;
