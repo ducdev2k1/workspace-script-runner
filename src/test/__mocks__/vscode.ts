@@ -46,7 +46,9 @@ export class EventEmitter<T> {
 
   event = (listener: (e: T) => void) => {
     this.listeners.push(listener);
-    return { dispose: () => this.listeners.splice(this.listeners.indexOf(listener), 1) };
+    return {
+      dispose: () => this.listeners.splice(this.listeners.indexOf(listener), 1),
+    };
   };
 
   fire(data: T): void {
@@ -69,7 +71,10 @@ export class TreeItem {
   contextValue?: string;
   command?: unknown;
 
-  constructor(label: string, collapsibleState: TreeItemCollapsibleState = TreeItemCollapsibleState.None) {
+  constructor(
+    label: string,
+    collapsibleState: TreeItemCollapsibleState = TreeItemCollapsibleState.None,
+  ) {
     this.label = label;
     this.collapsibleState = collapsibleState;
   }
@@ -78,7 +83,10 @@ export class TreeItem {
 /* ---------- ThemeIcon / ThemeColor ---------- */
 
 export class ThemeIcon {
-  constructor(public readonly id: string, public readonly color?: ThemeColor) {}
+  constructor(
+    public readonly id: string,
+    public readonly color?: ThemeColor,
+  ) {}
 }
 
 export class ThemeColor {
@@ -104,7 +112,13 @@ export class Task {
   execution: unknown;
   group: unknown;
 
-  constructor(def: unknown, scope: unknown, name: string, source: string, execution: unknown) {
+  constructor(
+    def: unknown,
+    scope: unknown,
+    name: string,
+    source: string,
+    execution: unknown,
+  ) {
     this.definition = def;
     this.scope = scope;
     this.name = name;
@@ -128,14 +142,18 @@ export const __mockConfig: Record<string, unknown> = {
 const createConfigProxy = () => ({
   get: <T>(key: string, defaultValue?: T): T => {
     const fullKey = `scriptsRunner.${key}`;
-    return (fullKey in __mockConfig ? __mockConfig[fullKey] : defaultValue) as T;
+    return (
+      fullKey in __mockConfig ? __mockConfig[fullKey] : defaultValue
+    ) as T;
   },
   update: async (_key: string, _value: unknown, _target?: unknown) => {},
 });
 
 export const workspace = {
   getConfiguration: (_section?: string) => createConfigProxy(),
-  workspaceFolders: undefined as { uri: Uri; name: string; index: number }[] | undefined,
+  workspaceFolders: undefined as
+    | { uri: Uri; name: string; index: number }[]
+    | undefined,
   createFileSystemWatcher: () => ({
     onDidChange: () => ({ dispose: () => {} }),
     onDidCreate: () => ({ dispose: () => {} }),
@@ -152,6 +170,9 @@ const createMockTerminal = (name: string) => ({
   sendText: () => {},
   show: () => {},
   dispose: () => {},
+  shellIntegration: {
+    executeCommand: () => ({}),
+  },
 });
 
 export const window = {
@@ -162,13 +183,17 @@ export const window = {
   showErrorMessage: () => {},
   showQuickPick: async () => undefined,
   onDidCloseTerminal: () => ({ dispose: () => {} }),
+  onDidChangeTerminalShellIntegration: () => ({ dispose: () => {} }),
   createTreeView: () => ({ dispose: () => {} }),
 };
 
 /* ---------- commands ---------- */
 
 export const commands = {
-  registerCommand: (_command: string, _callback: (...args: unknown[]) => unknown) => ({
+  registerCommand: (
+    _command: string,
+    _callback: (...args: unknown[]) => unknown,
+  ) => ({
     dispose: () => {},
   }),
 };
@@ -199,7 +224,9 @@ export const tasks = {
 
 /* ---------- FileSystemWatcher (type helper) ---------- */
 
-export type FileSystemWatcher = ReturnType<typeof workspace.createFileSystemWatcher>;
+export type FileSystemWatcher = ReturnType<
+  typeof workspace.createFileSystemWatcher
+>;
 
 /* ---------- Memento (for workspaceState) ---------- */
 

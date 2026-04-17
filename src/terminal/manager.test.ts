@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { EnumPackageManager, IScriptItem, IWorkspaceProject } from "../types";
 import { TerminalManager } from "./manager";
 
@@ -24,11 +24,11 @@ describe("TerminalManager", () => {
   });
 
   describe("runScript", () => {
-    it("creates a terminal and sends the correct run command", () => {
-      const terminal = manager.runScript(makeScript("build"));
+    it("creates a terminal and sends the correct run command", async () => {
+      const terminal = await manager.runScript(makeScript("build"));
       const sendSpy = vi.spyOn(terminal, "sendText");
       // Re-run to capture sendText on the new terminal
-      const t2 = manager.runScript(makeScript("build"));
+      const t2 = await manager.runScript(makeScript("build"));
       const spy2 = vi.spyOn(t2, "sendText");
       // Verify terminal was created with correct name
       expect(t2).toBeDefined();
@@ -38,19 +38,19 @@ describe("TerminalManager", () => {
       sendSpy.mockRestore();
     });
 
-    it("disposes existing terminal before creating new one", () => {
+    it("disposes existing terminal before creating new one", async () => {
       const script = makeScript("dev");
-      const t1 = manager.runScript(script);
+      const t1 = await manager.runScript(script);
       const disposeSpy = vi.spyOn(t1, "dispose");
-      manager.runScript(script);
+      await manager.runScript(script);
       expect(disposeSpy).toHaveBeenCalled();
     });
   });
 
   describe("stopScript", () => {
-    it("sends Ctrl+C then disposes terminal", () => {
+    it("sends Ctrl+C then disposes terminal", async () => {
       const script = makeScript("dev");
-      const terminal = manager.runScript(script);
+      const terminal = await manager.runScript(script);
       const sendSpy = vi.spyOn(terminal, "sendText");
       const disposeSpy = vi.spyOn(terminal, "dispose");
       manager.stopScript(script);
@@ -66,12 +66,12 @@ describe("TerminalManager", () => {
   });
 
   describe("restartScript", () => {
-    it("sends Ctrl+C to old terminal, disposes it, then starts new one", () => {
+    it("sends Ctrl+C to old terminal, disposes it, then starts new one", async () => {
       const script = makeScript("dev");
-      const t1 = manager.runScript(script);
+      const t1 = await manager.runScript(script);
       const sendSpy = vi.spyOn(t1, "sendText");
       const disposeSpy = vi.spyOn(t1, "dispose");
-      const t2 = manager.restartScript(script);
+      const t2 = await manager.restartScript(script);
       expect(sendSpy).toHaveBeenCalledWith("\x03", false);
       expect(disposeSpy).toHaveBeenCalled();
       expect(t2).toBeDefined();
@@ -80,9 +80,9 @@ describe("TerminalManager", () => {
   });
 
   describe("isRunning", () => {
-    it("returns true for running script", () => {
+    it("returns true for running script", async () => {
       const script = makeScript("dev");
-      manager.runScript(script);
+      await manager.runScript(script);
       expect(manager.isRunning(script)).toBe(true);
     });
 
@@ -92,9 +92,9 @@ describe("TerminalManager", () => {
   });
 
   describe("focusTerminal", () => {
-    it("calls show() on existing terminal", () => {
+    it("calls show() on existing terminal", async () => {
       const script = makeScript("dev");
-      const terminal = manager.runScript(script);
+      const terminal = await manager.runScript(script);
       const showSpy = vi.spyOn(terminal, "show");
       manager.focusTerminal(script);
       expect(showSpy).toHaveBeenCalled();
@@ -106,27 +106,29 @@ describe("TerminalManager", () => {
     });
   });
 
-  describe("handleTerminalClosed", () => {
-    it("returns script info for known terminal", () => {
+  describe("removeTerminal", () => {
+    it("returns script info for known terminal", async () => {
       const script = makeScript("dev");
-      const terminal = manager.runScript(script);
-      const result = manager.handleTerminalClosed(terminal);
+      const terminal = await manager.runScript(script);
+      const result = manager.removeTerminal(terminal);
       expect(result).toEqual({ projectName: "app", scriptName: "dev" });
       expect(manager.isRunning(script)).toBe(false);
     });
 
     it("returns null for unknown terminal", () => {
-      const fakeTerminal = { name: "unknown" } as unknown as import("vscode").Terminal;
-      expect(manager.handleTerminalClosed(fakeTerminal)).toBeNull();
+      const fakeTerminal = {
+        name: "unknown",
+      } as unknown as import("vscode").Terminal;
+      expect(manager.removeTerminal(fakeTerminal)).toBeNull();
     });
   });
 
   describe("dispose", () => {
-    it("disposes all terminals and clears map", () => {
+    it("disposes all terminals and clears map", async () => {
       const s1 = makeScript("dev");
       const s2 = makeScript("build");
-      const t1 = manager.runScript(s1);
-      const t2 = manager.runScript(s2);
+      const t1 = await manager.runScript(s1);
+      const t2 = await manager.runScript(s2);
       const d1 = vi.spyOn(t1, "dispose");
       const d2 = vi.spyOn(t2, "dispose");
 
