@@ -105,6 +105,10 @@ function registerCommands(context: vscode.ExtensionContext): void {
           item.script.name,
           true,
         );
+        treeDataProvider.incrementRunCount(
+          item.script.project.name,
+          item.script.name,
+        );
         vscode.window.showInformationMessage(
           `▶ Running: ${item.script.project.name}/${item.script.name}`,
         );
@@ -140,20 +144,34 @@ function registerCommands(context: vscode.ExtensionContext): void {
   );
   context.subscriptions.push(stopScriptCommand);
 
-  // Restart Script
+  // Restart Script — handles both terminal-run and debug sessions
   const restartScriptCommand = vscode.commands.registerCommand(
     "scriptsRunner.restartScript",
     async (item: ScriptTreeItem) => {
       if (item && item.script) {
-        terminalManager.stopScript(item.script);
-        await terminalManager.runScript(item.script);
-        treeDataProvider.setScriptRunning(
-          item.script.project.name,
-          item.script.name,
-          true,
-        );
+        const { name: scriptName, project } = item.script;
+        const projectName = project.name;
+
+        if (treeDataProvider.isScriptDebugging(projectName, scriptName)) {
+          // Stop the tracked debug session, then launch a fresh one for the
+          // same script. Avoids `workbench.action.debug.restart` which only
+          // restarts the active session (wrong when debugging multiple scripts).
+          const debugName = `Debug: ${projectName}/${scriptName}`;
+          const tracked = debugSessions.get(debugName);
+          await vscode.debug.stopDebugging(tracked);
+          const success = await launchDebug(item.script);
+          if (success) {
+            treeDataProvider.setScriptDebugging(projectName, scriptName, true);
+          }
+        } else {
+          terminalManager.stopScript(item.script);
+          await terminalManager.runScript(item.script);
+          treeDataProvider.setScriptRunning(projectName, scriptName, true);
+        }
+
+        treeDataProvider.incrementRunCount(projectName, scriptName);
         vscode.window.showInformationMessage(
-          `🔄 Restarted: ${item.script.project.name}/${item.script.name}`,
+          `🔄 Restarted: ${projectName}/${scriptName}`,
         );
       }
     },
@@ -250,6 +268,10 @@ function registerCommands(context: vscode.ExtensionContext): void {
             item.script.name,
             true,
           );
+          treeDataProvider.incrementRunCount(
+            item.script.project.name,
+            item.script.name,
+          );
           vscode.window.showInformationMessage(
             `🐛 Debugging: ${item.script.project.name}/${item.script.name}`,
           );
@@ -270,6 +292,13 @@ function registerCommands(context: vscode.ExtensionContext): void {
   // Clear debug state and tracked session on terminate
   const debugEndListener = vscode.debug.onDidTerminateDebugSession(
     (session) => {
+      // Guard against a late terminate from an old session: a restart starts a
+      // new session with the same name that already overwrote the map entry, so
+      // the old session's terminate must not clear the new session's state.
+      const tracked = debugSessions.get(session.name);
+      if (tracked && tracked.id !== session.id) {
+        return;
+      }
       debugSessions.delete(session.name);
       const match = session.name.match(/^Debug: (.+?)\/(.+)$/);
       if (match) {
@@ -328,6 +357,26 @@ function registerCommands(context: vscode.ExtensionContext): void {
     },
   );
   context.subscriptions.push(copyCommandCommand);
+
+  // Reset Run Counts — clears the Frequently Run history
+  const resetRunCountsCommand = vscode.commands.registerCommand(
+    "scriptsRunner.resetRunCounts",
+    async () => {
+      await treeDataProvider.resetRunCounts();
+      vscode.window.showInformationMessage("Scripts Runner: run counts reset");
+    },
+  );
+  context.subscriptions.push(resetRunCountsCommand);
+
+  // Refresh tree when the Frequently Run count setting changes
+  const configChangeListener = vscode.workspace.onDidChangeConfiguration(
+    (e) => {
+      if (e.affectsConfiguration("scriptsRunner.frequentlyRunCount")) {
+        treeDataProvider.refresh();
+      }
+    },
+  );
+  context.subscriptions.push(configChangeListener);
 
   // VS Code Task Provider
   const taskProvider = new ScriptRunnerTaskProvider(

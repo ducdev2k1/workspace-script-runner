@@ -137,6 +137,7 @@ export class CustomExecution {
 export const __mockConfig: Record<string, unknown> = {
   "scriptsRunner.defaultPackageManager": "auto",
   "scriptsRunner.workspacePackageManager": {},
+  "scriptsRunner.frequentlyRunCount": 5,
 };
 
 const createConfigProxy = () => ({
@@ -161,6 +162,7 @@ export const workspace = {
     dispose: () => {},
   }),
   getWorkspaceFolder: (_uri: Uri) => undefined,
+  onDidChangeConfiguration: () => ({ dispose: () => {} }),
 };
 
 /* ---------- window ---------- */

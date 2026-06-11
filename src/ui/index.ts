@@ -1,4 +1,5 @@
 export {
+  FrequentlyRunTreeItem,
   ProjectTreeItem,
   ScriptTreeItem,
   ScriptsTreeDataProvider,

@@ -2,7 +2,7 @@
   "name": "workspace-script-runner",
   "displayName": "Workspace Script Runner",
   "description": "Run npm scripts with intuitive UI, multi-root workspace support, and auto package manager detection",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "publisher": "ducdev2k1",
   "openvsx": {
     "publisher": "ducdev2k1"
@@ -121,6 +121,12 @@
         "title": "Copy Command",
         "category": "Scripts Runner",
         "icon": "$(copy)"
+      },
+      {
+        "command": "scriptsRunner.resetRunCounts",
+        "title": "Reset Run Counts",
+        "category": "Scripts Runner",
+        "icon": "$(clear-all)"
       }
     ],
     "taskDefinitions": [
@@ -177,6 +183,16 @@
           "group": "inline@1"
         },
         {
+          "command": "scriptsRunner.restartScript",
+          "when": "view == scriptsRunnerView && (viewItem == scriptDebugging || viewItem == scriptFavoriteDebugging)",
+          "group": "inline@2"
+        },
+        {
+          "command": "scriptsRunner.resetRunCounts",
+          "when": "view == scriptsRunnerView && viewItem == frequentlyRunGroup",
+          "group": "context@1"
+        },
+        {
           "command": "scriptsRunner.pinScript",
           "when": "view == scriptsRunnerView && (viewItem == script || viewItem == scriptRunning || viewItem == scriptDebugging)",
           "group": "context@1"
@@ -227,6 +243,13 @@
           "type": "object",
           "default": {},
           "description": "Override package manager for specific workspace folders. Example: { \"project-a\": \"pnpm\" }"
+        },
+        "scriptsRunner.frequentlyRunCount": {
+          "type": "number",
+          "default": 5,
+          "minimum": 0,
+          "maximum": 20,
+          "description": "Number of scripts shown in the Frequently Run group (0 to hide)"
         }
       }
     }

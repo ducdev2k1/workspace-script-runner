@@ -7,8 +7,9 @@ vi.mock("../workspace", () => ({
   scanWorkspace: () => mockProjects,
 }));
 
-import { MockMemento } from "../test/__mocks__/vscode";
+import { MockMemento, __mockConfig } from "../test/__mocks__/vscode";
 import {
+  FrequentlyRunTreeItem,
   ScriptsTreeDataProvider,
   ScriptTreeItem,
   ProjectTreeItem,
@@ -150,5 +151,86 @@ describe("ScriptsTreeDataProvider", () => {
   it("getProjects returns current projects", () => {
     expect(provider.getProjects()).toHaveLength(1);
     expect(provider.getProjects()[0].name).toBe("app");
+  });
+});
+
+describe("ScriptsTreeDataProvider - run counts / Frequently Run", () => {
+  let provider: ScriptsTreeDataProvider;
+  let memento: MockMemento;
+
+  beforeEach(() => {
+    const project = makeProject();
+    mockProjects.length = 0;
+    mockProjects.push(project);
+    memento = new MockMemento();
+    __mockConfig["scriptsRunner.frequentlyRunCount"] = 5;
+    provider = new ScriptsTreeDataProvider("/ext", memento as unknown as import("vscode").Memento);
+  });
+
+  it("incrementRunCount stores under 'project||script' key and accumulates", () => {
+    provider.incrementRunCount("app", "dev");
+    provider.incrementRunCount("app", "dev");
+    const counts = memento.get<Record<string, number>>("scriptsRunner.runCounts", {});
+    expect(counts["app||dev"]).toBe(2);
+  });
+
+  it("getTopRunScripts returns descending order, limited", () => {
+    provider.incrementRunCount("app", "build");
+    provider.incrementRunCount("app", "dev");
+    provider.incrementRunCount("app", "dev");
+    const top = provider.getTopRunScripts(5);
+    expect(top.map((s) => s.name)).toEqual(["dev", "build"]);
+  });
+
+  it("getTopRunScripts respects the limit", () => {
+    provider.incrementRunCount("app", "build");
+    provider.incrementRunCount("app", "dev");
+    expect(provider.getTopRunScripts(1)).toHaveLength(1);
+  });
+
+  it("getTopRunScripts filters out scripts no longer in projects", () => {
+    provider.incrementRunCount("app", "ghost");
+    provider.incrementRunCount("app", "dev");
+    const top = provider.getTopRunScripts(5);
+    expect(top.map((s) => s.name)).toEqual(["dev"]);
+  });
+
+  it("getTopRunScripts(0) returns empty", () => {
+    provider.incrementRunCount("app", "dev");
+    expect(provider.getTopRunScripts(0)).toHaveLength(0);
+  });
+
+  it("root getChildren prepends Frequently Run when data exists and setting > 0", async () => {
+    provider.incrementRunCount("app", "dev");
+    const children = await provider.getChildren();
+    expect(children[0]).toBeInstanceOf(FrequentlyRunTreeItem);
+    expect(children).toHaveLength(2); // group + 1 project
+  });
+
+  it("root getChildren hides Frequently Run when no run data", async () => {
+    const children = await provider.getChildren();
+    expect(children.some((c) => c instanceof FrequentlyRunTreeItem)).toBe(false);
+  });
+
+  it("root getChildren hides Frequently Run when setting = 0", async () => {
+    provider.incrementRunCount("app", "dev");
+    __mockConfig["scriptsRunner.frequentlyRunCount"] = 0;
+    const children = await provider.getChildren();
+    expect(children.some((c) => c instanceof FrequentlyRunTreeItem)).toBe(false);
+  });
+
+  it("Frequently Run children are ScriptTreeItems with correct contextValue", async () => {
+    provider.incrementRunCount("app", "dev");
+    provider.setScriptRunning("app", "dev", true);
+    const group = new FrequentlyRunTreeItem();
+    const children = await provider.getChildren(group);
+    expect(children[0]).toBeInstanceOf(ScriptTreeItem);
+    expect((children[0] as ScriptTreeItem).contextValue).toBe("scriptRunning");
+  });
+
+  it("resetRunCounts clears all counts", async () => {
+    provider.incrementRunCount("app", "dev");
+    await provider.resetRunCounts();
+    expect(provider.getTopRunScripts(5)).toHaveLength(0);
   });
 });

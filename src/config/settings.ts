@@ -28,6 +28,14 @@ export const getWorkspaceOverride = (
 };
 
 /**
+ * Số lượng script hiển thị trong nhóm "Frequently Run" (0 = ẩn nhóm)
+ */
+export const getFrequentlyRunCount = (): number => {
+  const config = vscode.workspace.getConfiguration("scriptsRunner");
+  return config.get<number>("frequentlyRunCount", 5);
+};
+
+/**
  * Resolve package manager theo thứ tự ưu tiên:
  * 1. Workspace override
  * 2. User default (nếu không phải 'auto')

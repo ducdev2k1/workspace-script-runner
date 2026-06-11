@@ -1,9 +1,10 @@
 import * as path from "path";
 import * as vscode from "vscode";
+import { getFrequentlyRunCount } from "../config";
 import { EnumPackageManager, IScriptItem, IWorkspaceProject } from "../types";
 import { scanWorkspace } from "../workspace";
 
-type TypeTreeItem = ProjectTreeItem | ScriptTreeItem;
+type TypeTreeItem = ProjectTreeItem | ScriptTreeItem | FrequentlyRunTreeItem;
 
 /** Map package manager với icon path */
 const getPackageManagerIcon = (
@@ -108,6 +109,19 @@ export class ScriptTreeItem extends vscode.TreeItem {
 }
 
 /**
+ * Root node nhóm "Frequently Run" — đầu tree All Scripts, children là các
+ * script chạy nhiều nhất (tái sử dụng ScriptTreeItem nên inline buttons có sẵn)
+ */
+export class FrequentlyRunTreeItem extends vscode.TreeItem {
+  constructor() {
+    super("Frequently Run", vscode.TreeItemCollapsibleState.Expanded);
+    this.contextValue = "frequentlyRunGroup";
+    this.iconPath = new vscode.ThemeIcon("history");
+    this.tooltip = "Scripts you run most often";
+  }
+}
+
+/**
  * TreeDataProvider cho Scripts Runner view
  */
 export class ScriptsTreeDataProvider implements vscode.TreeDataProvider<TypeTreeItem> {
@@ -131,6 +145,7 @@ export class ScriptsTreeDataProvider implements vscode.TreeDataProvider<TypeTree
   /** Persistent storage cho favorites (per-workspace) */
   private workspaceState: vscode.Memento;
   private static readonly FAVORITES_KEY = "scriptsRunner.favorites";
+  private static readonly RUN_COUNTS_KEY = "scriptsRunner.runCounts";
 
   constructor(extensionPath: string, workspaceState: vscode.Memento) {
     this.extensionPath = extensionPath;
@@ -260,10 +275,23 @@ export class ScriptsTreeDataProvider implements vscode.TreeDataProvider<TypeTree
    */
   getChildren(element?: TypeTreeItem): Thenable<TypeTreeItem[]> {
     if (!element) {
-      // Root level -> return projects
+      // Root level -> Frequently Run group (nếu có) + projects
+      const items: TypeTreeItem[] = [];
+      const topScripts = this.getTopRunScripts(getFrequentlyRunCount());
+      if (topScripts.length > 0) {
+        items.push(new FrequentlyRunTreeItem());
+      }
+      for (const project of this.projects) {
+        items.push(new ProjectTreeItem(project, this.extensionPath));
+      }
+      return Promise.resolve(items);
+    }
+
+    if (element instanceof FrequentlyRunTreeItem) {
+      // Frequently Run children -> top N script items (full state)
       return Promise.resolve(
-        this.projects.map(
-          (project) => new ProjectTreeItem(project, this.extensionPath),
+        this.getTopRunScripts(getFrequentlyRunCount()).map((script) =>
+          this.makeScriptTreeItem(script),
         ),
       );
     }
@@ -277,17 +305,28 @@ export class ScriptsTreeDataProvider implements vscode.TreeDataProvider<TypeTree
       });
 
       return Promise.resolve(
-        scripts.map((script) => {
-          const isRunning = this.isScriptRunning(script.project.name, script.name);
-          const isDebugging = this.isScriptDebugging(script.project.name, script.name);
-          const isFav = this.isFavorite(script.project.name, script.name);
-          return new ScriptTreeItem(script, this.extensionPath, isRunning, isDebugging, isFav);
-        }),
+        scripts.map((script) => this.makeScriptTreeItem(script)),
       );
     }
 
     // Script level -> no children
     return Promise.resolve([]);
+  }
+
+  /**
+   * Tạo ScriptTreeItem với đầy đủ state (running/debugging/favorite)
+   */
+  private makeScriptTreeItem(script: IScriptItem): ScriptTreeItem {
+    const isRunning = this.isScriptRunning(script.project.name, script.name);
+    const isDebugging = this.isScriptDebugging(script.project.name, script.name);
+    const isFav = this.isFavorite(script.project.name, script.name);
+    return new ScriptTreeItem(
+      script,
+      this.extensionPath,
+      isRunning,
+      isDebugging,
+      isFav,
+    );
   }
 
   /**
@@ -322,6 +361,66 @@ export class ScriptsTreeDataProvider implements vscode.TreeDataProvider<TypeTree
     await this.workspaceState.update(
       ScriptsTreeDataProvider.FAVORITES_KEY,
       Array.from(favorites),
+    );
+    this._onDidChangeTreeData.fire();
+  }
+
+  // ── Run counts (Frequently Run) ────────────────────────────────────────────
+
+  private getRunCounts(): Record<string, number> {
+    return this.workspaceState.get<Record<string, number>>(
+      ScriptsTreeDataProvider.RUN_COUNTS_KEY,
+      {},
+    );
+  }
+
+  /**
+   * Tăng số lần chạy của một script và refresh tree
+   */
+  incrementRunCount(projectName: string, scriptName: string): void {
+    const counts = this.getRunCounts();
+    const key = this.getScriptKey(projectName, scriptName);
+    counts[key] = (counts[key] ?? 0) + 1;
+    // Fire-and-forget so the tree updates immediately; swallow persist errors
+    // (a failed count write must not break the run/debug action).
+    void this.workspaceState
+      .update(ScriptsTreeDataProvider.RUN_COUNTS_KEY, counts)
+      .then(undefined, () => undefined);
+    this._onDidChangeTreeData.fire();
+  }
+
+  /**
+   * Top N script chạy nhiều nhất (desc theo count).
+   * Bỏ qua key không resolve được trong projects hiện tại (script đã bị xóa).
+   */
+  getTopRunScripts(limit: number): IScriptItem[] {
+    if (limit <= 0) {
+      return [];
+    }
+    const counts = this.getRunCounts();
+    const resolved: { script: IScriptItem; count: number }[] = [];
+    for (const project of this.projects) {
+      for (const script of project.scripts) {
+        const key = this.getScriptKey(project.name, script.name);
+        const count = counts[key];
+        if (count && count > 0) {
+          resolved.push({ script, count });
+        }
+      }
+    }
+    return resolved
+      .sort((a, b) => b.count - a.count)
+      .slice(0, limit)
+      .map((entry) => entry.script);
+  }
+
+  /**
+   * Xóa toàn bộ lịch sử run counts và refresh tree
+   */
+  async resetRunCounts(): Promise<void> {
+    await this.workspaceState.update(
+      ScriptsTreeDataProvider.RUN_COUNTS_KEY,
+      {},
     );
     this._onDidChangeTreeData.fire();
   }
