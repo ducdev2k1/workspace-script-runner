@@ -21,6 +21,26 @@ let packageJsonWatcher: vscode.FileSystemWatcher;
 const debugSessions = new Map<string, vscode.DebugSession>();
 
 /**
+ * Tạo TreeView an toàn: nếu view id chưa được đăng ký trong manifest (xảy ra
+ * thoáng qua ngay sau khi update extension, trước khi reload window),
+ * createTreeView sẽ throw — bắt lại để activate() không bị dừng giữa chừng.
+ */
+function registerTreeView(
+  context: vscode.ExtensionContext,
+  viewId: string,
+  options: Parameters<typeof vscode.window.createTreeView>[1],
+): void {
+  try {
+    context.subscriptions.push(vscode.window.createTreeView(viewId, options));
+  } catch (error) {
+    console.warn(
+      `[Scripts Runner] View "${viewId}" chưa đăng ký (thường do cache sau khi update — reload window sẽ khắc phục):`,
+      error,
+    );
+  }
+}
+
+/**
  * Extension được activate khi workspace có package.json
  */
 export function activate(context: vscode.ExtensionContext): void {
@@ -33,25 +53,21 @@ export function activate(context: vscode.ExtensionContext): void {
   frequentlyRunProvider = new FrequentlyRunProvider(treeDataProvider);
   terminalManager = new TerminalManager();
 
-  // Register All Scripts TreeView
-  const treeView = vscode.window.createTreeView("scriptsRunnerView", {
+  // Register views. Wrap each in a guard: right after an extension update VS
+  // Code may run the new code against the old (cached) manifest, where a newly
+  // added view id isn't registered yet — createTreeView would throw and abort
+  // activation (commands never register). The guard keeps the rest working;
+  // the missing view appears after the next window reload.
+  registerTreeView(context, "scriptsRunnerView", {
     treeDataProvider,
     showCollapseAll: true,
   });
-  context.subscriptions.push(treeView);
-
-  // Register Frequently Run TreeView
-  const frequentlyRunView = vscode.window.createTreeView(
-    "scriptsRunnerFrequentView",
-    { treeDataProvider: frequentlyRunProvider },
-  );
-  context.subscriptions.push(frequentlyRunView);
-
-  // Register Running Scripts TreeView
-  const runningView = vscode.window.createTreeView("scriptsRunnerRunningView", {
+  registerTreeView(context, "scriptsRunnerFrequentView", {
+    treeDataProvider: frequentlyRunProvider,
+  });
+  registerTreeView(context, "scriptsRunnerRunningView", {
     treeDataProvider: runningScriptsProvider,
   });
-  context.subscriptions.push(runningView);
 
   // Sync running scripts view khi state thay đổi
   const runningChangeListener = treeDataProvider.onRunningScriptsChange(
