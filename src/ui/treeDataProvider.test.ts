@@ -9,7 +9,6 @@ vi.mock("../workspace", () => ({
 
 import { MockMemento, __mockConfig } from "../test/__mocks__/vscode";
 import {
-  FrequentlyRunTreeItem,
   ScriptsTreeDataProvider,
   ScriptTreeItem,
   ProjectTreeItem,
@@ -200,37 +199,38 @@ describe("ScriptsTreeDataProvider - run counts / Frequently Run", () => {
     expect(provider.getTopRunScripts(0)).toHaveLength(0);
   });
 
-  it("root getChildren prepends Frequently Run when data exists and setting > 0", async () => {
+  it("root getChildren returns only projects (Frequently Run moved to own view)", async () => {
     provider.incrementRunCount("app", "dev");
     const children = await provider.getChildren();
-    expect(children[0]).toBeInstanceOf(FrequentlyRunTreeItem);
-    expect(children).toHaveLength(2); // group + 1 project
+    expect(children).toHaveLength(1);
+    expect(children[0]).toBeInstanceOf(ProjectTreeItem);
   });
 
-  it("root getChildren hides Frequently Run when no run data", async () => {
-    const children = await provider.getChildren();
-    expect(children.some((c) => c instanceof FrequentlyRunTreeItem)).toBe(false);
-  });
-
-  it("root getChildren hides Frequently Run when setting = 0", async () => {
-    provider.incrementRunCount("app", "dev");
-    __mockConfig["scriptsRunner.frequentlyRunCount"] = 0;
-    const children = await provider.getChildren();
-    expect(children.some((c) => c instanceof FrequentlyRunTreeItem)).toBe(false);
-  });
-
-  it("Frequently Run children are ScriptTreeItems with correct contextValue", async () => {
-    provider.incrementRunCount("app", "dev");
+  it("makeScriptTreeItem builds a ScriptTreeItem reflecting running state", () => {
     provider.setScriptRunning("app", "dev", true);
-    const group = new FrequentlyRunTreeItem();
-    const children = await provider.getChildren(group);
-    expect(children[0]).toBeInstanceOf(ScriptTreeItem);
-    expect((children[0] as ScriptTreeItem).contextValue).toBe("scriptRunning");
+    const [devScript] = provider.getProjects()[0].scripts;
+    const item = provider.makeScriptTreeItem(devScript);
+    expect(item).toBeInstanceOf(ScriptTreeItem);
+    expect(item.contextValue).toBe("scriptRunning");
   });
 
   it("resetRunCounts clears all counts", async () => {
     provider.incrementRunCount("app", "dev");
     await provider.resetRunCounts();
     expect(provider.getTopRunScripts(5)).toHaveLength(0);
+  });
+
+  it("removeRunCount drops only the targeted script", async () => {
+    provider.incrementRunCount("app", "dev");
+    provider.incrementRunCount("app", "build");
+    await provider.removeRunCount("app", "dev");
+    const top = provider.getTopRunScripts(5);
+    expect(top.map((s) => s.name)).toEqual(["build"]);
+  });
+
+  it("removeRunCount is a no-op for an unknown script", async () => {
+    provider.incrementRunCount("app", "dev");
+    await provider.removeRunCount("app", "ghost");
+    expect(provider.getTopRunScripts(5).map((s) => s.name)).toEqual(["dev"]);
   });
 });

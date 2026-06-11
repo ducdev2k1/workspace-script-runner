@@ -1,10 +1,9 @@
 import * as path from "path";
 import * as vscode from "vscode";
-import { getFrequentlyRunCount } from "../config";
 import { EnumPackageManager, IScriptItem, IWorkspaceProject } from "../types";
 import { scanWorkspace } from "../workspace";
 
-type TypeTreeItem = ProjectTreeItem | ScriptTreeItem | FrequentlyRunTreeItem;
+type TypeTreeItem = ProjectTreeItem | ScriptTreeItem;
 
 /** Map package manager với icon path */
 const getPackageManagerIcon = (
@@ -105,19 +104,6 @@ export class ScriptTreeItem extends vscode.TreeItem {
       title: isActive ? "Stop Script" : "Run Script",
       arguments: [this],
     };
-  }
-}
-
-/**
- * Root node nhóm "Frequently Run" — đầu tree All Scripts, children là các
- * script chạy nhiều nhất (tái sử dụng ScriptTreeItem nên inline buttons có sẵn)
- */
-export class FrequentlyRunTreeItem extends vscode.TreeItem {
-  constructor() {
-    super("Frequently Run", vscode.TreeItemCollapsibleState.Expanded);
-    this.contextValue = "frequentlyRunGroup";
-    this.iconPath = new vscode.ThemeIcon("history");
-    this.tooltip = "Scripts you run most often";
   }
 }
 
@@ -275,23 +261,10 @@ export class ScriptsTreeDataProvider implements vscode.TreeDataProvider<TypeTree
    */
   getChildren(element?: TypeTreeItem): Thenable<TypeTreeItem[]> {
     if (!element) {
-      // Root level -> Frequently Run group (nếu có) + projects
-      const items: TypeTreeItem[] = [];
-      const topScripts = this.getTopRunScripts(getFrequentlyRunCount());
-      if (topScripts.length > 0) {
-        items.push(new FrequentlyRunTreeItem());
-      }
-      for (const project of this.projects) {
-        items.push(new ProjectTreeItem(project, this.extensionPath));
-      }
-      return Promise.resolve(items);
-    }
-
-    if (element instanceof FrequentlyRunTreeItem) {
-      // Frequently Run children -> top N script items (full state)
+      // Root level -> projects
       return Promise.resolve(
-        this.getTopRunScripts(getFrequentlyRunCount()).map((script) =>
-          this.makeScriptTreeItem(script),
+        this.projects.map(
+          (project) => new ProjectTreeItem(project, this.extensionPath),
         ),
       );
     }
@@ -314,9 +287,10 @@ export class ScriptsTreeDataProvider implements vscode.TreeDataProvider<TypeTree
   }
 
   /**
-   * Tạo ScriptTreeItem với đầy đủ state (running/debugging/favorite)
+   * Tạo ScriptTreeItem với đầy đủ state (running/debugging/favorite).
+   * Public để "Frequently Run" view tái sử dụng (giữ nguyên inline buttons).
    */
-  private makeScriptTreeItem(script: IScriptItem): ScriptTreeItem {
+  makeScriptTreeItem(script: IScriptItem): ScriptTreeItem {
     const isRunning = this.isScriptRunning(script.project.name, script.name);
     const isDebugging = this.isScriptDebugging(script.project.name, script.name);
     const isFav = this.isFavorite(script.project.name, script.name);
@@ -412,6 +386,23 @@ export class ScriptsTreeDataProvider implements vscode.TreeDataProvider<TypeTree
       .sort((a, b) => b.count - a.count)
       .slice(0, limit)
       .map((entry) => entry.script);
+  }
+
+  /**
+   * Xóa một script khỏi lịch sử run counts (gỡ khỏi Frequently Run) và refresh
+   */
+  async removeRunCount(projectName: string, scriptName: string): Promise<void> {
+    const counts = this.getRunCounts();
+    const key = this.getScriptKey(projectName, scriptName);
+    if (counts[key] === undefined) {
+      return;
+    }
+    delete counts[key];
+    await this.workspaceState.update(
+      ScriptsTreeDataProvider.RUN_COUNTS_KEY,
+      counts,
+    );
+    this._onDidChangeTreeData.fire();
   }
 
   /**

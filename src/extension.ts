@@ -5,6 +5,7 @@ import { ScriptRunnerTaskProvider } from "./tasks";
 import { TerminalManager } from "./terminal";
 import { IScriptItem } from "./types";
 import {
+  FrequentlyRunProvider,
   RunningScriptsProvider,
   ScriptsTreeDataProvider,
   ScriptTreeItem,
@@ -13,6 +14,7 @@ import { watchPackageJson } from "./workspace";
 
 let treeDataProvider: ScriptsTreeDataProvider;
 let runningScriptsProvider: RunningScriptsProvider;
+let frequentlyRunProvider: FrequentlyRunProvider;
 let terminalManager: TerminalManager;
 let packageJsonWatcher: vscode.FileSystemWatcher;
 /** Track debug sessions by name so we can stop the correct one */
@@ -28,6 +30,7 @@ export function activate(context: vscode.ExtensionContext): void {
     context.workspaceState,
   );
   runningScriptsProvider = new RunningScriptsProvider();
+  frequentlyRunProvider = new FrequentlyRunProvider(treeDataProvider);
   terminalManager = new TerminalManager();
 
   // Register All Scripts TreeView
@@ -36,6 +39,13 @@ export function activate(context: vscode.ExtensionContext): void {
     showCollapseAll: true,
   });
   context.subscriptions.push(treeView);
+
+  // Register Frequently Run TreeView
+  const frequentlyRunView = vscode.window.createTreeView(
+    "scriptsRunnerFrequentView",
+    { treeDataProvider: frequentlyRunProvider },
+  );
+  context.subscriptions.push(frequentlyRunView);
 
   // Register Running Scripts TreeView
   const runningView = vscode.window.createTreeView("scriptsRunnerRunningView", {
@@ -50,6 +60,15 @@ export function activate(context: vscode.ExtensionContext): void {
     },
   );
   context.subscriptions.push(runningChangeListener);
+
+  // Đồng bộ Frequently Run view mỗi khi cây chính thay đổi (run-counts,
+  // running/debugging state, refresh workspace, đổi setting count)
+  const frequentlyRunChangeListener = treeDataProvider.onDidChangeTreeData(
+    () => {
+      frequentlyRunProvider.refresh();
+    },
+  );
+  context.subscriptions.push(frequentlyRunChangeListener);
 
   // Watch package.json changes
   packageJsonWatcher = watchPackageJson(() => {
@@ -357,6 +376,23 @@ function registerCommands(context: vscode.ExtensionContext): void {
     },
   );
   context.subscriptions.push(copyCommandCommand);
+
+  // Remove from Frequently Run — drops a single script from the run history
+  const removeFromFrequentCommand = vscode.commands.registerCommand(
+    "scriptsRunner.removeFromFrequent",
+    async (item: ScriptTreeItem) => {
+      if (item?.script) {
+        await treeDataProvider.removeRunCount(
+          item.script.project.name,
+          item.script.name,
+        );
+        vscode.window.showInformationMessage(
+          `Removed from Frequently Run: ${item.script.project.name}/${item.script.name}`,
+        );
+      }
+    },
+  );
+  context.subscriptions.push(removeFromFrequentCommand);
 
   // Reset Run Counts — clears the Frequently Run history
   const resetRunCountsCommand = vscode.commands.registerCommand(

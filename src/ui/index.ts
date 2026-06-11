@@ -1,5 +1,4 @@
 export {
-  FrequentlyRunTreeItem,
   ProjectTreeItem,
   ScriptTreeItem,
   ScriptsTreeDataProvider,
@@ -8,3 +7,4 @@ export {
   RunningScriptItem,
   RunningScriptsProvider,
 } from "./running-scripts-provider";
+export { FrequentlyRunProvider } from "./frequently-run-provider";

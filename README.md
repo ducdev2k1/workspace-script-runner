@@ -32,7 +32,7 @@
 - 🔄 **Running state indicator** - Know which scripts are currently running
 - 🛑 **Easy stop/restart** - Stop or restart scripts with one click
 - 🐞 **Debug Script** - Launch VS Code debugger directly from any script, with one-click Restart for the running debug session
-- 🕘 **Frequently Run** - Auto-surfaced group of your most-run scripts at the top of the list
+- 🕘 **Frequently Run** - Dedicated panel listing your most-run scripts, separate from the main tree
 - ⭐ **Favorites / Pin** - Pin frequently used scripts to the top of the list
 - 📋 **Copy Command** - Right-click any script to copy the full command (e.g. `pnpm run build`)
 - 🔗 **VS Code Task integration** - Scripts appear in "Tasks: Run Task" palette
@@ -40,6 +40,9 @@
 ## 📸 Screenshot
 
 > TreeView showing projects with package manager icons and scripts
+
+![Workspace Script Runner](resources/demo.jpg)
+
 
 ## 🚀 Usage
 
@@ -67,7 +70,7 @@
 | ------------------------- | ------------------------------------------------------- | ------- |
 | `defaultPackageManager`   | Default PM when auto-detection fails                    | `auto`  |
 | `workspacePackageManager` | Override PM for specific projects                       | `{}`    |
-| `frequentlyRunCount`      | Scripts shown in the Frequently Run group (0 to hide)   | `5`     |
+| `frequentlyRunCount`      | Scripts shown in the Frequently Run panel (0 to hide)   | `5`     |
 
 ## 🎯 Commands
 
@@ -81,6 +84,7 @@
 | `Scripts Runner: Unpin from Favorites`   | Remove script from favorites         |
 | `Scripts Runner: Copy Command`           | Copy full run command to clipboard   |
 | `Scripts Runner: Change Package Manager` | Override package manager for project |
+| `Scripts Runner: Remove from Frequently Run` | Drop one script from the Frequently Run list |
 | `Scripts Runner: Reset Run Counts`       | Clear the Frequently Run history     |
 | `Scripts Runner: Refresh`                | Refresh scripts list                 |
 

@@ -2,7 +2,7 @@
   "name": "workspace-script-runner",
   "displayName": "Workspace Script Runner",
   "description": "Run npm scripts with intuitive UI, multi-root workspace support, and auto package manager detection",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "publisher": "ducdev2k1",
   "openvsx": {
     "publisher": "ducdev2k1"
@@ -42,6 +42,11 @@
           "id": "scriptsRunnerView",
           "name": "All Scripts",
           "icon": "$(list-tree)"
+        },
+        {
+          "id": "scriptsRunnerFrequentView",
+          "name": "Frequently Run",
+          "icon": "$(history)"
         },
         {
           "id": "scriptsRunnerRunningView",
@@ -127,6 +132,12 @@
         "title": "Reset Run Counts",
         "category": "Scripts Runner",
         "icon": "$(clear-all)"
+      },
+      {
+        "command": "scriptsRunner.removeFromFrequent",
+        "title": "Remove from Frequently Run",
+        "category": "Scripts Runner",
+        "icon": "$(close)"
       }
     ],
     "taskDefinitions": [
@@ -154,58 +165,68 @@
           "command": "scriptsRunner.refresh",
           "when": "view == scriptsRunnerView",
           "group": "navigation"
+        },
+        {
+          "command": "scriptsRunner.resetRunCounts",
+          "when": "view == scriptsRunnerFrequentView",
+          "group": "navigation"
         }
       ],
       "view/item/context": [
         {
           "command": "scriptsRunner.runScript",
-          "when": "view == scriptsRunnerView && (viewItem == script || viewItem == scriptFavorite)",
+          "when": "(view == scriptsRunnerView || view == scriptsRunnerFrequentView) && (viewItem == script || viewItem == scriptFavorite)",
           "group": "inline@1"
         },
         {
           "command": "scriptsRunner.debugScript",
-          "when": "view == scriptsRunnerView && (viewItem == script || viewItem == scriptFavorite)",
+          "when": "(view == scriptsRunnerView || view == scriptsRunnerFrequentView) && (viewItem == script || viewItem == scriptFavorite)",
           "group": "inline@2"
         },
         {
           "command": "scriptsRunner.stopScript",
-          "when": "view == scriptsRunnerView && (viewItem == scriptRunning || viewItem == scriptFavoriteRunning)",
+          "when": "(view == scriptsRunnerView || view == scriptsRunnerFrequentView) && (viewItem == scriptRunning || viewItem == scriptFavoriteRunning)",
           "group": "inline@1"
         },
         {
           "command": "scriptsRunner.restartScript",
-          "when": "view == scriptsRunnerView && (viewItem == scriptRunning || viewItem == scriptFavoriteRunning)",
+          "when": "(view == scriptsRunnerView || view == scriptsRunnerFrequentView) && (viewItem == scriptRunning || viewItem == scriptFavoriteRunning)",
           "group": "inline@2"
         },
         {
           "command": "scriptsRunner.stopScript",
-          "when": "view == scriptsRunnerView && (viewItem == scriptDebugging || viewItem == scriptFavoriteDebugging)",
+          "when": "(view == scriptsRunnerView || view == scriptsRunnerFrequentView) && (viewItem == scriptDebugging || viewItem == scriptFavoriteDebugging)",
           "group": "inline@1"
         },
         {
           "command": "scriptsRunner.restartScript",
-          "when": "view == scriptsRunnerView && (viewItem == scriptDebugging || viewItem == scriptFavoriteDebugging)",
+          "when": "(view == scriptsRunnerView || view == scriptsRunnerFrequentView) && (viewItem == scriptDebugging || viewItem == scriptFavoriteDebugging)",
           "group": "inline@2"
-        },
-        {
-          "command": "scriptsRunner.resetRunCounts",
-          "when": "view == scriptsRunnerView && viewItem == frequentlyRunGroup",
-          "group": "context@1"
         },
         {
           "command": "scriptsRunner.pinScript",
-          "when": "view == scriptsRunnerView && (viewItem == script || viewItem == scriptRunning || viewItem == scriptDebugging)",
+          "when": "(view == scriptsRunnerView || view == scriptsRunnerFrequentView) && (viewItem == script || viewItem == scriptRunning || viewItem == scriptDebugging)",
           "group": "context@1"
         },
         {
           "command": "scriptsRunner.unpinScript",
-          "when": "view == scriptsRunnerView && (viewItem == scriptFavorite || viewItem == scriptFavoriteRunning || viewItem == scriptFavoriteDebugging)",
+          "when": "(view == scriptsRunnerView || view == scriptsRunnerFrequentView) && (viewItem == scriptFavorite || viewItem == scriptFavoriteRunning || viewItem == scriptFavoriteDebugging)",
           "group": "context@1"
         },
         {
           "command": "scriptsRunner.copyCommand",
-          "when": "view == scriptsRunnerView",
+          "when": "view == scriptsRunnerView || view == scriptsRunnerFrequentView",
           "group": "context@2"
+        },
+        {
+          "command": "scriptsRunner.removeFromFrequent",
+          "when": "view == scriptsRunnerFrequentView",
+          "group": "inline@9"
+        },
+        {
+          "command": "scriptsRunner.removeFromFrequent",
+          "when": "view == scriptsRunnerFrequentView",
+          "group": "context@3"
         },
         {
           "command": "scriptsRunner.stopScript",
@@ -249,7 +270,7 @@
           "default": 5,
           "minimum": 0,
           "maximum": 20,
-          "description": "Number of scripts shown in the Frequently Run group (0 to hide)"
+          "description": "Number of scripts shown in the Frequently Run panel (0 to hide)"
         }
       }
     }
