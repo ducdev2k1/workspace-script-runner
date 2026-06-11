@@ -115,3 +115,13 @@ jobs:
         with:
           name: workspace-script-runner
           path: "*.vsix"
+
+      - name: Create draft GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ needs.tag.outputs.version }}" \
+            --draft \
+            --generate-notes \
+            --title "${{ needs.tag.outputs.version }}" \
+            *.vsix
