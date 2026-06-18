@@ -99,13 +99,20 @@ export class ScriptTreeItem extends vscode.TreeItem {
     };
 
     if (clickAction === "focus") {
-      // Frequently Run: click chỉ focus terminal đang chạy (no-op nếu chưa chạy),
-      // không chạy lại / không stop — tránh vô tình re-run khi chỉ muốn xem log.
-      this.command = {
-        command: "scriptsRunner.focusTerminal",
-        title: "Focus Terminal",
-        arguments: [this.script],
-      };
+      // Frequently Run: đang chạy → focus terminal (xem log, không re-run);
+      // chưa chạy → chạy script luôn.
+      const isActive = running || debugging;
+      this.command = isActive
+        ? {
+            command: "scriptsRunner.focusTerminal",
+            title: "Focus Terminal",
+            arguments: [this.script],
+          }
+        : {
+            command: "scriptsRunner.runScript",
+            title: "Run Script",
+            arguments: [this],
+          };
     } else {
       // All Scripts: stop nếu running/debugging, run nếu idle
       const isActive = running || debugging;

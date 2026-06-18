@@ -61,8 +61,15 @@ describe("FrequentlyRunProvider", () => {
     expect(first.contextValue).toBe("scriptRunning");
   });
 
-  it("click focuses terminal instead of re-running the script", () => {
+  it("click runs the script when it is idle", () => {
     source.incrementRunCount("app", "dev");
+    const [first] = provider.getChildren();
+    expect(first.command?.command).toBe("scriptsRunner.runScript");
+  });
+
+  it("click focuses the terminal when the script is running", () => {
+    source.incrementRunCount("app", "dev");
+    source.setScriptRunning("app", "dev", true);
     const [first] = provider.getChildren();
     expect(first.command?.command).toBe("scriptsRunner.focusTerminal");
     // arg là IScriptItem, không phải tree item (khớp focusTerminal handler)
