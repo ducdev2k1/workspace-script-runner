@@ -275,7 +275,7 @@ function registerCommands(context: vscode.ExtensionContext): void {
     "scriptsRunner.refresh",
     () => {
       treeDataProvider.refresh();
-      vscode.window.showInformationMessage("Scripts Runner refreshed");
+      vscode.window.showInformationMessage("Workspace Script Runner refreshed");
     },
   );
   context.subscriptions.push(refreshCommand);
@@ -415,7 +415,9 @@ function registerCommands(context: vscode.ExtensionContext): void {
     "scriptsRunner.resetRunCounts",
     async () => {
       await treeDataProvider.resetRunCounts();
-      vscode.window.showInformationMessage("Scripts Runner: run counts reset");
+      vscode.window.showInformationMessage(
+        "Workspace Script Runner: run counts reset",
+      );
     },
   );
   context.subscriptions.push(resetRunCountsCommand);

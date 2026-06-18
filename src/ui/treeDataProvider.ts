@@ -56,6 +56,7 @@ export class ScriptTreeItem extends vscode.TreeItem {
     running: boolean = false,
     debugging: boolean = false,
     favorite: boolean = false,
+    clickAction: "toggle" | "focus" = "toggle",
   ) {
     super(script.name, vscode.TreeItemCollapsibleState.None);
 
@@ -97,13 +98,25 @@ export class ScriptTreeItem extends vscode.TreeItem {
       dark: vscode.Uri.file(iconPath),
     };
 
-    // Command khi click: stop nếu running/debugging, run nếu idle
-    const isActive = running || debugging;
-    this.command = {
-      command: isActive ? "scriptsRunner.stopScript" : "scriptsRunner.runScript",
-      title: isActive ? "Stop Script" : "Run Script",
-      arguments: [this],
-    };
+    if (clickAction === "focus") {
+      // Frequently Run: click chỉ focus terminal đang chạy (no-op nếu chưa chạy),
+      // không chạy lại / không stop — tránh vô tình re-run khi chỉ muốn xem log.
+      this.command = {
+        command: "scriptsRunner.focusTerminal",
+        title: "Focus Terminal",
+        arguments: [this.script],
+      };
+    } else {
+      // All Scripts: stop nếu running/debugging, run nếu idle
+      const isActive = running || debugging;
+      this.command = {
+        command: isActive
+          ? "scriptsRunner.stopScript"
+          : "scriptsRunner.runScript",
+        title: isActive ? "Stop Script" : "Run Script",
+        arguments: [this],
+      };
+    }
   }
 }
 
@@ -290,7 +303,10 @@ export class ScriptsTreeDataProvider implements vscode.TreeDataProvider<TypeTree
    * Tạo ScriptTreeItem với đầy đủ state (running/debugging/favorite).
    * Public để "Frequently Run" view tái sử dụng (giữ nguyên inline buttons).
    */
-  makeScriptTreeItem(script: IScriptItem): ScriptTreeItem {
+  makeScriptTreeItem(
+    script: IScriptItem,
+    clickAction: "toggle" | "focus" = "toggle",
+  ): ScriptTreeItem {
     const isRunning = this.isScriptRunning(script.project.name, script.name);
     const isDebugging = this.isScriptDebugging(script.project.name, script.name);
     const isFav = this.isFavorite(script.project.name, script.name);
@@ -300,6 +316,7 @@ export class ScriptsTreeDataProvider implements vscode.TreeDataProvider<TypeTree
       isRunning,
       isDebugging,
       isFav,
+      clickAction,
     );
   }
 

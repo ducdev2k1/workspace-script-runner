@@ -33,6 +33,6 @@ export class FrequentlyRunProvider
   getChildren(): ScriptTreeItem[] {
     return this.source
       .getTopRunScripts(getFrequentlyRunCount())
-      .map((script) => this.source.makeScriptTreeItem(script));
+      .map((script) => this.source.makeScriptTreeItem(script, "focus"));
   }
 }
